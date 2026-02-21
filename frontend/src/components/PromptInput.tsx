@@ -10,7 +10,7 @@ const INTERVAL_SEC = 10;
 
 export function PromptInput({ disabled, isMyTurn, onSendDelta }: PromptInputProps) {
     const [text, setText] = useState("");
-    const [countdown, setCountdown] = useState(INTERVAL_SEC);
+    const [, setCountdown] = useState(INTERVAL_SEC);
     const textRef = useRef(text);
     textRef.current = text;
 
@@ -36,8 +36,6 @@ export function PromptInput({ disabled, isMyTurn, onSendDelta }: PromptInputProp
         return () => clearInterval(tick);
     }, [flush]);
 
-    const timerPct = ((countdown - 1) / (INTERVAL_SEC - 1)) * 100;
-
     return (
         <section className={`prompt card ${isMyTurn && !disabled ? "my-turn" : ""}`}>
             <div className="prompt-header">
@@ -51,13 +49,6 @@ export function PromptInput({ disabled, isMyTurn, onSendDelta }: PromptInputProp
                 disabled={disabled}
                 className={isMyTurn && !disabled ? "active-input" : ""}
             />
-            <div className="timer-wrap">
-                <div
-                    className="timer-bar"
-                    style={{ width: `${timerPct}%` }}
-                />
-            </div>
-            <p className="meta">next autosend: {countdown}s</p>
         </section>
     );
 }

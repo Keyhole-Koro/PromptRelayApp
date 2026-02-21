@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+// No React imports needed
 import type { PlayerInfo, TurnState } from "../types";
 
 interface PlayerBarProps {
@@ -8,57 +8,36 @@ interface PlayerBarProps {
 }
 
 export function PlayerBar({ players, turn, myPlayerId }: PlayerBarProps) {
-    const [elapsed, setElapsed] = useState(0);
-
-    // Countdown effect
-    useEffect(() => {
-        if (!turn) {
-            setElapsed(0);
-            return;
-        }
-
-        const tick = () => {
-            const now = Date.now();
-            setElapsed(Math.max(0, now - turn.startedAt));
-        };
-
-        tick();
-        const interval = setInterval(tick, 200);
-        return () => clearInterval(interval);
-    }, [turn]);
-
     if (!players || players.length === 0) return null;
 
     const currentTurnIndex = turn?.currentPlayerIndex ?? -1;
-    const remainingSec = Math.max(0, Math.ceil((30_000 - elapsed) / 1000));
 
     return (
         <div className="player-bar card">
             <h3 className="section-heading">🔄 Turn Order</h3>
-            <div className="player-order">
+            <div className="player-order-horizontal">
                 {players.map((p, idx) => {
                     const isActive = idx === currentTurnIndex;
                     const isMe = p.id === myPlayerId;
 
                     return (
-                        <div key={p.id} className="player-node-wrap">
-                            <div className={`player-dot ${isActive ? "active" : ""} ${isMe ? "me" : ""}`}>
-                                <span className="player-initial">
-                                    {p.name.charAt(0).toUpperCase()}
-                                </span>
+                        <div key={p.id} className="player-node-wrap-horizontal">
+                            <div className={`player-avatar-box ${isActive ? "active-glow" : ""} ${isMe ? "me" : ""}`}>
+                                {/* You could swap this out for a real image URL if the player has one */}
+                                <img
+                                    src={`https://api.dicebear.com/7.x/bottts/svg?seed=${p.name}`}
+                                    alt={p.name}
+                                    className="player-avatar-img"
+                                />
+                                {isMe && <div className="me-badge">You</div>}
                             </div>
-                            <div className="player-name-label">
-                                {p.name} {isMe && "(You)"}
+                            <div className={`player-name-label-horizontal ${isActive ? "active-text" : ""}`}>
+                                {p.name}
                             </div>
-                            {isActive && (
-                                <div className={`player-timer ${remainingSec <= 5 ? "danger" : ""}`}>
-                                    {remainingSec}s
-                                </div>
-                            )}
 
                             {/* The arrows between players */}
                             {idx < players.length - 1 && (
-                                <div className="player-arrow">
+                                <div className="player-arrow-horizontal">
                                     <span className="arrow-icon">»</span>
                                 </div>
                             )}
