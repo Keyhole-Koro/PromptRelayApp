@@ -45,6 +45,7 @@ type IncomingMessage =
   | { type: "event"; event: unknown }
   | { type: "error"; message: string };
 
+// ── DOM refs ──────────────────────────────────────────
 const wsStatusEl = document.getElementById("wsStatus") as HTMLSpanElement;
 const gameStatusEl = document.getElementById("gameStatus") as HTMLSpanElement;
 const roomStatusEl = document.getElementById("roomStatus") as HTMLSpanElement;
@@ -66,18 +67,56 @@ const promptInputEl = document.getElementById("promptInput") as HTMLTextAreaElem
 const autosendInfoEl = document.getElementById("autosendInfo") as HTMLParagraphElement;
 const logEl = document.getElementById("log") as HTMLPreElement;
 const versionBadgeEl = document.getElementById("versionBadge") as HTMLDivElement;
+const timerBarEl = document.getElementById("timerBar") as HTMLDivElement;
+const scoreDisplayEl = document.getElementById("scoreDisplay") as HTMLElement;
+const scoreValueEl = document.getElementById("scoreValue") as HTMLElement;
+const particlesEl = document.getElementById("particles") as HTMLDivElement;
 
 let ws: WebSocket | null = null;
 let roomState: RoomState | null = null;
 let wsReady = false;
 let nextAutosendInSec = 10;
 
+// ── Particles ─────────────────────────────────────────
+function spawnParticles(): void {
+  const COLORS = [
+    "rgba(56,182,255,0.35)",
+    "rgba(160,120,240,0.30)",
+    "rgba(0,212,200,0.25)",
+    "rgba(255,130,200,0.20)",
+    "rgba(255,200,100,0.25)",
+  ];
+
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement("div");
+    p.className = "particle";
+    const size = Math.random() * 4 + 2;
+    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    const left = Math.random() * 100;
+    const duration = Math.random() * 15 + 10;
+    const delay = Math.random() * 20;
+
+    p.style.cssText = `
+      width: ${size}px;
+      height: ${size}px;
+      left: ${left}%;
+      background: ${color};
+      box-shadow: 0 0 ${size * 3}px ${color};
+      animation-duration: ${duration}s;
+      animation-delay: ${delay}s;
+    `;
+    particlesEl.appendChild(p);
+  }
+}
+
+// ── Logging ───────────────────────────────────────────
 function log(message: string): void {
   const ts = new Date().toLocaleTimeString();
   logEl.textContent += `[${ts}] ${message}\n`;
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+// ── Image helpers ─────────────────────────────────────
 function latestImage(images: ImageRecord[]): ImageRecord | null {
   if (images.length === 0) return null;
   return images[images.length - 1] ?? null;
@@ -95,8 +134,13 @@ function updateImage(img: HTMLImageElement, placeholder: HTMLElement, url: strin
   }
 }
 
+// ── Render ────────────────────────────────────────────
 function render(state: RoomState): void {
   roomState = state;
+
+  // Phase on body for CSS hooks
+  document.body.dataset.phase = state.phase;
+
   gameStatusEl.textContent = `phase: ${state.phase}`;
   roomStatusEl.textContent = `room: ${state.roomCode}`;
 
@@ -109,8 +153,17 @@ function render(state: RoomState): void {
   updateImage(aiImageEl, aiPlaceholderEl, latestImage(state.aiImages)?.url ?? null);
 
   topicTextEl.textContent = state.topicText ? `お題テキスト: ${state.topicText}` : "";
+
+  // Score display
+  if (state.score) {
+    scoreValueEl.textContent = String(Math.round(state.score.score100));
+    scoreDisplayEl.classList.add("visible");
+  } else {
+    scoreDisplayEl.classList.remove("visible");
+  }
 }
 
+// ── WebSocket ─────────────────────────────────────────
 function send(action: Record<string, unknown>): void {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify(action));
@@ -153,6 +206,7 @@ function connectWs(): void {
   });
 }
 
+// ── Player actions ────────────────────────────────────
 function getPlayerName(): string {
   const name = playerNameEl.value.trim();
   return name || "Player";
@@ -175,9 +229,13 @@ startGameBtn.addEventListener("click", () => {
   log("start_game sent");
 });
 
+// ── Timer bar + autosend ──────────────────────────────
 setInterval(() => {
   nextAutosendInSec = nextAutosendInSec <= 1 ? 10 : nextAutosendInSec - 1;
   autosendInfoEl.textContent = `next autosend: ${nextAutosendInSec}s`;
+  // Animate timer bar
+  const pct = ((nextAutosendInSec - 1) / 9) * 100;
+  timerBarEl.style.width = `${pct}%`;
 }, 1000);
 
 setInterval(() => {
@@ -190,6 +248,7 @@ setInterval(() => {
   log(`delta sent (${delta.length} chars)`);
 }, 10_000);
 
+// ── Version ───────────────────────────────────────────
 async function loadVersion(): Promise<void> {
   try {
     const res = await fetch("/api/version");
@@ -205,5 +264,7 @@ async function loadVersion(): Promise<void> {
   }
 }
 
+// ── Init ──────────────────────────────────────────────
+spawnParticles();
 connectWs();
 void loadVersion();

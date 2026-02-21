@@ -4,9 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PromptRelay</title>
+  <meta name="description" content="PromptRelay – AI画像生成リレーゲーム" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
-<body>
+<body data-phase="lobby">
+
+  <!-- Particle background -->
+  <div id="particles"></div>
+
   <div class="page">
     <header class="topbar">
       <h1>PromptRelay</h1>
@@ -17,7 +25,8 @@
       </div>
     </header>
 
-    <section class="controls card">
+    <section class="controls card" id="controlsSection">
+      <h2>⚡ Game Controls</h2>
       <div class="control-row">
         <label class="field">
           <span>Player Name</span>
@@ -25,18 +34,24 @@
         </label>
       </div>
       <div class="control-row">
-        <button id="createRoomBtn" type="button">ルーム作成</button>
+        <button id="createRoomBtn" type="button">🎮 ルーム作成</button>
         <input id="joinRoomCode" type="text" placeholder="ROOM CODE" maxlength="8" />
-        <button id="joinRoomBtn" type="button">参加</button>
-        <button id="startGameBtn" type="button">開始</button>
+        <button id="joinRoomBtn" type="button">🚀 参加</button>
+        <button id="startGameBtn" type="button">▶ 開始</button>
       </div>
       <p id="currentTurn" class="meta">Current turn: -</p>
       <p id="players" class="meta">Players: -</p>
     </section>
 
+    <!-- Score Display (hidden until scoring phase) -->
+    <section id="scoreDisplay" class="card">
+      <div class="score-value" id="scoreValue">--</div>
+      <div class="score-label">similarity score</div>
+    </section>
+
     <section class="board">
       <article class="panel card">
-        <h2>お題</h2>
+        <h2>🎯 お題</h2>
         <div class="image-frame large">
           <img id="topicImage" alt="topic" />
           <p id="topicPlaceholder" class="placeholder">お題画像を待機中</p>
@@ -45,7 +60,7 @@
       </article>
 
       <article class="panel card">
-        <h2>プレイヤー画像</h2>
+        <h2>🖼 プレイヤー画像</h2>
         <div class="image-frame large">
           <img id="playerImage" alt="player generated" />
           <p id="playerPlaceholder" class="placeholder">生成待機中</p>
@@ -53,7 +68,7 @@
       </article>
 
       <article class="panel card ai-panel">
-        <h2>AIリアルタイム</h2>
+        <h2>🤖 AIリアルタイム</h2>
         <div class="image-frame small">
           <img id="aiImage" alt="ai generated" />
           <p id="aiPlaceholder" class="placeholder">生成待機中</p>
@@ -61,14 +76,17 @@
       </article>
     </section>
 
-    <section class="prompt card">
-      <h2>プロンプト入力（10秒ごと自動送信）</h2>
+    <section class="prompt card" id="promptSection">
+      <h2>📝 プロンプト入力（10秒ごと自動送信）</h2>
       <textarea id="promptInput" placeholder="ここに追記していくと、10秒ごとにdelta送信されます"></textarea>
+      <div class="timer-wrap">
+        <div id="timerBar"></div>
+      </div>
       <p id="autosendInfo" class="meta">next autosend: 10s</p>
     </section>
 
     <section class="card">
-      <h2>ログ</h2>
+      <h2>📋 ログ</h2>
       <pre id="log" aria-live="polite"></pre>
     </section>
   </div>
