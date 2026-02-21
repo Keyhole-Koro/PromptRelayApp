@@ -3,7 +3,6 @@ import { useGameSocket } from "./hooks/useGameSocket";
 import { TopBar } from "./components/TopBar";
 import { GameBoard } from "./components/GameBoard";
 import { PromptInput } from "./components/PromptInput";
-import { LogPanel } from "./components/LogPanel";
 import { Particles } from "./components/Particles";
 import { HomeScreen } from "./components/HomeScreen";
 import { LobbyScreen } from "./components/LobbyScreen";
@@ -16,7 +15,7 @@ import { ResultScreen } from "./components/ResultScreen";
 type Screen = "home" | "lobby" | "game";
 
 function App() {
-  const { roomState, wsStatus, logs, myPlayerId, lastReaction, send } = useGameSocket();
+  const { roomState, wsStatus, myPlayerId, lastReaction, send } = useGameSocket();
   const [screen, setScreen] = useState<Screen>("home");
   const [version, setVersion] = useState<string>("loading...");
   const [pendingSolo, setPendingSolo] = useState(false);
@@ -116,7 +115,7 @@ function App() {
   const fullPrompt = (roomState?.prompts ?? []).map((p) => p.delta).join("");
 
   return (
-    <div data-phase={phase}>
+    <div data-phase={phase} data-my-turn={isMyTurn ? "true" : "false"}>
       <Particles />
       <ReactionLayer reaction={lastReaction} />
       {phase === "playing" && (
@@ -149,12 +148,6 @@ function App() {
               roomCode={roomState?.roomCode ?? "-"}
             />
 
-            <div className="game-info-bar">
-              <p className="meta">
-                Current turn: {currentPlayer?.name ?? "-"} &nbsp;|&nbsp;
-                Players: {players.map((p) => p.name).join(", ") || "-"}
-              </p>
-            </div>
 
             <PlayerBar
               players={players}
@@ -175,8 +168,6 @@ function App() {
               fullPrompt={fullPrompt}
               onSendDelta={handleSendDelta}
             />
-
-            <LogPanel logs={logs} />
 
             {(phase === "scoring" || phase === "done") && (
               <ResultScreen

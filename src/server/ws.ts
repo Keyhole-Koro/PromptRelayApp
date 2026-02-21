@@ -67,6 +67,7 @@ interface ConnectionState {
     ws: WebSocket;
     roomCode: string | null;
     playerId: string;
+    playerName: string | null;
 }
 
 function getPlayerIdFromRequest(req: IncomingMessage): string | null {
@@ -103,6 +104,7 @@ export function setupWebSocket(server: HttpServer, roomManager: RoomManager): We
             ws,
             roomCode: null,
             playerId: requestedPlayerId ?? randomUUID(),
+            playerName: null,
         };
 
         send(ws, { type: "connected", playerId: conn.playerId });
@@ -162,6 +164,7 @@ function handleMessage(
             roomConnections.get(conn.roomCode)!.add(conn);
 
             // Join the creator
+            conn.playerName = msg.playerName;
             engine.joinRoom(conn.playerId, msg.playerName);
             break;
         }
@@ -173,6 +176,7 @@ function handleMessage(
                 return;
             }
             conn.roomCode = msg.roomCode;
+            conn.playerName = msg.playerName;
 
             // Register connection
             if (!roomConnections.has(msg.roomCode)) {
@@ -180,7 +184,13 @@ function handleMessage(
             }
             roomConnections.get(msg.roomCode)!.add(conn);
 
-            engine.joinRoom(conn.playerId, msg.playerName);
+            const existingByName = engine.state.players.find((p) => p.name === msg.playerName);
+            if (existingByName) {
+                conn.playerId = existingByName.id;
+                send(conn.ws, { type: "connected", playerId: conn.playerId });
+            } else {
+                engine.joinRoom(conn.playerId, msg.playerName);
+            }
             break;
         }
 

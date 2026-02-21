@@ -1,4 +1,4 @@
-// No React imports needed
+import { useState, useEffect } from "react";
 import type { PlayerInfo, TurnState } from "../types";
 
 interface PlayerBarProps {
@@ -8,6 +8,29 @@ interface PlayerBarProps {
 }
 
 export function PlayerBar({ players, turn, myPlayerId }: PlayerBarProps) {
+    const [timeRemainingPct, setTimeRemainingPct] = useState(100);
+
+    useEffect(() => {
+        if (!turn) {
+            setTimeRemainingPct(100);
+            return;
+        }
+
+        const computePct = () => {
+            const now = Date.now();
+            const elapsed = now - turn.startedAt;
+            let pct = 100 - (elapsed / turn.durationMs) * 100;
+            if (pct < 0) pct = 0;
+            if (pct > 100) pct = 100;
+            setTimeRemainingPct(pct);
+        };
+
+        computePct();
+        // Update at ~30fps for smooth visual progress
+        const timer = setInterval(computePct, 30);
+        return () => clearInterval(timer);
+    }, [turn]);
+
     if (!players || players.length === 0) return null;
 
     const orderedPlayers = turn?.order
@@ -16,6 +39,14 @@ export function PlayerBar({ players, turn, myPlayerId }: PlayerBarProps) {
             .filter((p): p is PlayerInfo => Boolean(p))
         : players;
     const activePlayerId = turn?.order?.[turn.currentPlayerIndex] ?? null;
+
+    // Define colors for the bar: green -> yellow -> red
+    let barColorClass = "time-high";
+    if (timeRemainingPct < 25) {
+        barColorClass = "time-critical";
+    } else if (timeRemainingPct < 50) {
+        barColorClass = "time-medium";
+    }
 
     return (
         <div className="player-bar card neon-track-container">
@@ -63,6 +94,18 @@ export function PlayerBar({ players, turn, myPlayerId }: PlayerBarProps) {
                     })}
                 </div>
             </div>
+
+            {/* Time Remaining Progress Bar */}
+            {turn && activePlayerId && (
+                <div className="turn-timer-container">
+                    <div className="turn-timer-track">
+                        <div
+                            className={`turn-timer-fill ${barColorClass}`}
+                            style={{ width: `${timeRemainingPct}%` }}
+                        ></div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

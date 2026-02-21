@@ -36,6 +36,7 @@ export function setupWebSocket(server, roomManager) {
             ws,
             roomCode: null,
             playerId: requestedPlayerId ?? randomUUID(),
+            playerName: null,
         };
         send(ws, { type: "connected", playerId: conn.playerId });
         ws.on("message", (data) => {
@@ -84,6 +85,7 @@ function handleMessage(conn, msg, roomManager, roomConnections) {
             }
             roomConnections.get(conn.roomCode).add(conn);
             // Join the creator
+            conn.playerName = msg.playerName;
             engine.joinRoom(conn.playerId, msg.playerName);
             break;
         }
@@ -94,12 +96,20 @@ function handleMessage(conn, msg, roomManager, roomConnections) {
                 return;
             }
             conn.roomCode = msg.roomCode;
+            conn.playerName = msg.playerName;
             // Register connection
             if (!roomConnections.has(msg.roomCode)) {
                 roomConnections.set(msg.roomCode, new Set());
             }
             roomConnections.get(msg.roomCode).add(conn);
-            engine.joinRoom(conn.playerId, msg.playerName);
+            const existingByName = engine.state.players.find((p) => p.name === msg.playerName);
+            if (existingByName) {
+                conn.playerId = existingByName.id;
+                send(conn.ws, { type: "connected", playerId: conn.playerId });
+            }
+            else {
+                engine.joinRoom(conn.playerId, msg.playerName);
+            }
             break;
         }
         case "start_game": {
