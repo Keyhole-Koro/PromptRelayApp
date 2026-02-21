@@ -18,37 +18,50 @@ export function PlayerBar({ players, turn, myPlayerId }: PlayerBarProps) {
     const activePlayerId = turn?.order?.[turn.currentPlayerIndex] ?? null;
 
     return (
-        <div className="player-bar card">
+        <div className="player-bar card neon-track-container">
             <h3 className="section-heading">🔄 Turn Order</h3>
-            <div className="player-order-horizontal">
-                {orderedPlayers.map((p, idx) => {
-                    const isActive = p.id === activePlayerId;
-                    const isMe = p.id === myPlayerId;
 
-                    return (
-                        <div key={p.id} className="player-node-wrap-horizontal">
-                            <div className={`player-avatar-box ${isActive ? "active-glow" : ""} ${isMe ? "me" : ""}`}>
-                                {/* You could swap this out for a real image URL if the player has one */}
-                                <img
-                                    src={`https://api.dicebear.com/7.x/bottts/svg?seed=${p.name}`}
-                                    alt={p.name}
-                                    className="player-avatar-img"
-                                />
-                                {isMe && <div className="me-badge">You</div>}
-                            </div>
-                            <div className={`player-name-label-horizontal ${isActive ? "active-text" : ""}`}>
-                                {p.name}
-                            </div>
+            <div className="neon-track-wrapper">
+                {/* The glowing line connecting all players */}
+                <div className="neon-track-line"></div>
 
-                            {/* The arrows between players */}
-                            {idx < orderedPlayers.length - 1 && (
-                                <div className="player-arrow-horizontal">
-                                    <span className="arrow-icon">»</span>
+                <div className="player-nodes-container">
+                    {orderedPlayers.map((p, idx) => {
+                        const isActive = p.id === activePlayerId;
+                        const isMe = p.id === myPlayerId;
+                        // Determine if player has already gone in this round (for styling)
+                        const isPast = turn && turn.currentPlayerIndex > -1 && idx < turn.currentPlayerIndex;
+
+                        return (
+                            <div
+                                key={p.id}
+                                className={`player-node ${isActive ? "is-active" : ""} ${isPast ? "is-past" : ""}`}
+                            >
+                                <div className="player-avatar-box">
+                                    <img
+                                        src={`https://api.dicebear.com/7.x/bottts/svg?seed=${p.name}`}
+                                        alt={p.name}
+                                        className="player-avatar-img"
+                                    />
+                                    {isMe && <div className="me-badge">You</div>}
                                 </div>
-                            )}
-                        </div>
-                    );
-                })}
+
+                                <div className="player-info-stack">
+                                    <div className="player-name-label">
+                                        {p.name}
+                                    </div>
+                                    {isActive && (
+                                        <div className="player-typing-indicator">
+                                            <span className="dot"></span>
+                                            <span className="dot"></span>
+                                            <span className="dot"></span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

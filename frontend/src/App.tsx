@@ -3,7 +3,6 @@ import { useGameSocket } from "./hooks/useGameSocket";
 import { TopBar } from "./components/TopBar";
 import { GameBoard } from "./components/GameBoard";
 import { PromptInput } from "./components/PromptInput";
-import { ScoreDisplay } from "./components/ScoreDisplay";
 import { LogPanel } from "./components/LogPanel";
 import { Particles } from "./components/Particles";
 import { HomeScreen } from "./components/HomeScreen";
@@ -12,6 +11,7 @@ import { PlayerBar } from "./components/PlayerBar";
 import { ReactionLayer } from "./components/ReactionLayer";
 import { ReactionFAB } from "./components/ReactionFAB";
 import { MockPlayerClient } from "./utils/MockPlayer";
+import { ResultScreen } from "./components/ResultScreen";
 
 type Screen = "home" | "lobby" | "game";
 
@@ -156,19 +156,17 @@ function App() {
               </p>
             </div>
 
-            <ScoreDisplay score={roomState?.score ?? null} />
+            <PlayerBar
+              players={players}
+              turn={roomState?.turn ?? null}
+              myPlayerId={myPlayerId}
+            />
 
             <GameBoard
               topicImageUrl={roomState?.topicImageUrl ?? null}
               topicText={roomState?.topicText ?? null}
               playerImages={roomState?.playerImages ?? []}
               aiImages={roomState?.aiImages ?? []}
-            />
-
-            <PlayerBar
-              players={players}
-              turn={roomState?.turn ?? null}
-              myPlayerId={myPlayerId}
             />
 
             <PromptInput
@@ -179,6 +177,13 @@ function App() {
             />
 
             <LogPanel logs={logs} />
+
+            {(phase === "scoring" || phase === "done") && (
+              <ResultScreen
+                roomState={roomState}
+                onBackToHome={handleBackToHome}
+              />
+            )}
           </>
         )}
       </div>

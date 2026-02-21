@@ -1,6 +1,26 @@
 // ─── WebSocket Protocol Handler ─────────────────────────────────
 import { WebSocketServer } from "ws";
 import { randomUUID } from "node:crypto";
+function getPlayerIdFromRequest(req) {
+    try {
+        const rawUrl = req.url ?? "/ws";
+        const parsed = new URL(rawUrl, "ws://localhost");
+        const pid = parsed.searchParams.get("pid");
+        if (!pid)
+            return null;
+        const trimmed = pid.trim();
+        if (!trimmed)
+            return null;
+        if (trimmed.length > 128)
+            return null;
+        if (!/^[A-Za-z0-9._-]+$/.test(trimmed))
+            return null;
+        return trimmed;
+    }
+    catch {
+        return null;
+    }
+}
 function send(ws, msg) {
     if (ws.readyState === ws.OPEN) {
         ws.send(JSON.stringify(msg));
@@ -10,11 +30,12 @@ export function setupWebSocket(server, roomManager) {
     const wss = new WebSocketServer({ server, path: "/ws" });
     // Track all connections per room for broadcasting
     const roomConnections = new Map();
-    wss.on("connection", (ws, _req) => {
+    wss.on("connection", (ws, req) => {
+        const requestedPlayerId = getPlayerIdFromRequest(req);
         const conn = {
             ws,
             roomCode: null,
-            playerId: randomUUID(),
+            playerId: requestedPlayerId ?? randomUUID(),
         };
         send(ws, { type: "connected", playerId: conn.playerId });
         ws.on("message", (data) => {

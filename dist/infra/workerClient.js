@@ -13,13 +13,13 @@ export class HttpWorkerClient {
         return (await res.json());
     }
     async generateImage(req) {
-        const res = await fetch(`${WORKER_BASE}/v1/image:generate`, {
+        const res = await fetch(`${WORKER_BASE}/preview`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(req),
         });
         if (!res.ok)
-            throw new Error(`Worker image:generate failed: ${res.status}`);
+            throw new Error(`Worker preview failed: ${res.status}`);
         return (await res.json());
     }
     async calculateScore(req) {
