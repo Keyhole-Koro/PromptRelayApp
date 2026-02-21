@@ -189,10 +189,11 @@ function handleMessage(
             }
             roomConnections.get(msg.roomCode)!.add(conn);
 
-            const existingByName = engine.state.players.find((p) => p.name === msg.playerName);
-            if (existingByName) {
-                conn.playerId = existingByName.id;
+            const existingById = engine.state.players.find((p) => p.id === conn.playerId);
+            if (existingById) {
+                conn.playerName = existingById.name;
                 send(conn.ws, { type: "connected", playerId: conn.playerId });
+                send(conn.ws, { type: "room_state", state: engine.state });
             } else {
                 engine.joinRoom(conn.playerId, msg.playerName);
             }

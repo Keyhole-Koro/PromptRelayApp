@@ -16,6 +16,7 @@ export function HomeScreen({ onSoloPlay, onCreateRoom, onJoinRoom }: HomeScreenP
     const [showTutorial, setShowTutorial] = useState(false);
 
     const playerName = name.trim() || "Player";
+    const multiPlayerName = name.trim();
 
     if (mode === "select") {
         return (
@@ -110,7 +111,11 @@ export function HomeScreen({ onSoloPlay, onCreateRoom, onJoinRoom }: HomeScreenP
                 <div className="multi-actions">
                     <button
                         className="start-btn"
-                        onClick={() => onCreateRoom(playerName)}
+                        onClick={() => {
+                            if (!multiPlayerName) return;
+                            onCreateRoom(multiPlayerName);
+                        }}
+                        disabled={!multiPlayerName}
                     >
                         🎮 ルーム作成
                     </button>
@@ -126,9 +131,10 @@ export function HomeScreen({ onSoloPlay, onCreateRoom, onJoinRoom }: HomeScreenP
                         <button
                             className="start-btn"
                             onClick={() => {
-                                if (roomCode.trim()) onJoinRoom(roomCode.trim(), playerName);
+                                if (!multiPlayerName) return;
+                                if (roomCode.trim()) onJoinRoom(roomCode.trim(), multiPlayerName);
                             }}
-                            disabled={!roomCode.trim()}
+                            disabled={!multiPlayerName || !roomCode.trim()}
                         >
                             🚀 参加
                         </button>

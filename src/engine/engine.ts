@@ -202,18 +202,17 @@ export class GameEngine {
             nextPlayerIndex: isRoundOver ? null : nextIndex,
         });
 
-        // Trigger final image generation
-        if (prompt && !isRoundOver) {
-            this.triggerImageGeneration(prompt, true).then(() => {
-                this.startTurn(nextIndex, currentOrder);
-            });
-        } else if (!isRoundOver) {
-            this.startTurn(nextIndex, currentOrder);
+        // Trigger final image generation in the background (don't block next turn)
+        if (prompt) {
+            this.triggerImageGeneration(prompt, true);
         }
 
-        // If round is over, go to scoring immediately (don't wait for image gen)
         if (isRoundOver) {
-            this.onRoundComplete();
+            // Wait a moment for the last image gen to start, then go to selection
+            this.clock.setTimeout(() => this.onRoundComplete(), 1000);
+        } else {
+            // Start next turn immediately — don't wait for image generation
+            this.startTurn(nextIndex, currentOrder);
         }
     }
 
@@ -309,28 +308,47 @@ export class GameEngine {
     // ── Round completion ──
 
     private async onRoundComplete(): Promise<void> {
-        // Use the latest player and AI images for judging
-        const latestPlayerImg = this.state.playerImages[this.state.playerImages.length - 1];
-        const latestAiImg = this.state.aiImages[this.state.aiImages.length - 1];
-
         this.dispatch({
             type: "ROUND_COMPLETED",
             timestamp: this.clock.now(),
         });
+        // Enter "selecting" phase — frontend shows ImageSelectionScreen
+    }
 
-        // Immediately transition to scoring and call /judge
+    async selectImage(playerId: string, seq: number): Promise<void> {
+        if (this.state.phase !== "selecting") return;
+
+        const playerImg = this.state.playerImages.find((img) => img.seq === seq);
+        if (!playerImg) {
+            this.dispatch({
+                type: "ERROR",
+                timestamp: this.clock.now(),
+                message: `Selected image seq ${seq} not found`,
+            });
+            return;
+        }
+
+        // Find the latest AI image
+        const aiImg = this.state.aiImages[this.state.aiImages.length - 1];
+
         this.dispatch({
             type: "IMAGE_SELECTED",
             timestamp: this.clock.now(),
-            playerId: "",
-            selectedSeq: latestPlayerImg?.seq ?? 0,
+            playerId,
+            selectedSeq: seq,
         });
 
-        if (!this.state.topicImageUrl || !latestPlayerImg || !latestAiImg) {
+        if (!this.state.topicImageUrl || !aiImg) {
             this.dispatch({
                 type: "ERROR",
                 timestamp: this.clock.now(),
                 message: "Missing images for scoring",
+            });
+            // Fallback so game doesn't get stuck
+            this.dispatch({
+                type: "SCORED",
+                timestamp: this.clock.now(),
+                cosine: 0, score100: 0, playerScore100: 0, aiScore100: 0, winner: "draw",
             });
             return;
         }
@@ -338,8 +356,8 @@ export class GameEngine {
         try {
             const scoreResult = await this.worker.calculateScore({
                 topicImageUrl: this.state.topicImageUrl,
-                playerImageUrl: latestPlayerImg.url,
-                aiImageUrl: latestAiImg.url,
+                playerImageUrl: playerImg.url,
+                aiImageUrl: aiImg.url,
             });
             this.dispatch({
                 type: "SCORED",
@@ -356,12 +374,13 @@ export class GameEngine {
                 timestamp: this.clock.now(),
                 message: `Scoring failed: ${err instanceof Error ? err.message : String(err)}`,
             });
+            // Fallback so game doesn't get stuck
+            this.dispatch({
+                type: "SCORED",
+                timestamp: this.clock.now(),
+                cosine: 0, score100: 0, playerScore100: 0, aiScore100: 0, winner: "draw",
+            });
         }
-    }
-
-    async selectImage(_playerId: string, _seq: number): Promise<void> {
-        // Scoring is now handled automatically by onRoundComplete
-        // This method is kept for API compatibility
     }
 
     // ── Prompt management ──

@@ -24,10 +24,10 @@ function getScoreLabel(score: number): string {
 export function ResultScreen({ roomState, onBackToHome }: ResultScreenProps) {
     if (!roomState) return null;
 
-    const { topicImageUrl, topicText, aiImages, prompts, score, players, selectedImageSeq, phase } = roomState;
+    const { topicImageUrl, topicText, playerImages, aiImages, prompts, score, players, selectedImageSeq, phase } = roomState;
     const finalImage = selectedImageSeq
-        ? aiImages.find(img => img.seq === selectedImageSeq && img.isFinal) ?? aiImages.find(img => img.seq === selectedImageSeq)
-        : (aiImages.length > 0 ? aiImages[aiImages.length - 1] : null);
+        ? playerImages.find(img => img.seq === selectedImageSeq) ?? playerImages[playerImages.length - 1]
+        : (playerImages.length > 0 ? playerImages[playerImages.length - 1] : null);
     const scoreVal = score?.score100 ?? 0;
     const cosineVal = score?.cosine ?? 0;
     const winnerLabel = score?.winner === "player" ? "プレイヤー" : score?.winner === "ai" ? "AI" : "引き分け";
@@ -65,26 +65,36 @@ export function ResultScreen({ roomState, onBackToHome }: ResultScreenProps) {
                     </div>
                 )}
 
-                {/* Images Comparison */}
+                {/* Topic Image */}
+                <div className="result-topic-card">
+                    <span className="result-img-label">📷 お題</span>
+                    {topicImageUrl ? (
+                        <img src={topicImageUrl} alt="Topic" className="result-img" />
+                    ) : (
+                        <div className="result-img-placeholder">No Image</div>
+                    )}
+                    {topicText && <p className="result-img-caption">"{topicText}"</p>}
+                </div>
+
+                {/* Player VS AI */}
                 <div className="result-comparison">
                     <div className="result-img-card">
-                        <span className="result-img-label">📷 お題</span>
-                        {topicImageUrl ? (
-                            <img src={topicImageUrl} alt="Topic" className="result-img" />
+                        <span className="result-img-label">🎨 みんなの作品</span>
+                        {finalImage ? (
+                            <img src={finalImage.url} alt="Player" className="result-img" />
                         ) : (
-                            <div className="result-img-placeholder">No Image</div>
+                            <div className="result-img-placeholder">画像なし</div>
                         )}
-                        {topicText && <p className="result-img-caption">"{topicText}"</p>}
                     </div>
 
                     <div className="result-vs">VS</div>
 
                     <div className="result-img-card">
-                        <span className="result-img-label">🎨 みんなの作品</span>
-                        {finalImage ? (
-                            <img src={finalImage.url} alt="Final" className="result-img" />
+                        <span className="result-img-label">🤖 AIの作品</span>
+                        {aiImages.length > 0 ? (
+                            <img src={aiImages[aiImages.length - 1].url} alt="AI" className="result-img" />
                         ) : (
-                            <div className="result-img-placeholder">生成中…</div>
+                            <div className="result-img-placeholder">画像なし</div>
                         )}
                     </div>
                 </div>

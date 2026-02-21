@@ -8,7 +8,6 @@ import { LobbyScreen } from "./components/LobbyScreen";
 import { PlayerBar } from "./components/PlayerBar";
 import { ReactionLayer } from "./components/ReactionLayer";
 import { ReactionFAB } from "./components/ReactionFAB";
-import { MockPlayerClient } from "./utils/MockPlayer";
 import { ResultScreen } from "./components/ResultScreen";
 import { TurnCountdown } from "./components/TurnCountdown";
 import { ImageSelectionScreen } from "./components/ImageSelectionScreen";
@@ -21,7 +20,6 @@ function App() {
   const [version, setVersion] = useState<string>("loading...");
   const [pendingSolo, setPendingSolo] = useState(false);
   const [isStartingGame, setIsStartingGame] = useState(false);
-  const [mockClients, setMockClients] = useState<MockPlayerClient[]>([]);
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [isFirstTurnCountdown, setIsFirstTurnCountdown] = useState(false);
 
@@ -106,20 +104,10 @@ function App() {
     [send]
   );
 
-  const handleAddMockPlayer = useCallback(() => {
-    if (!roomState?.roomCode) return;
-    const botName = `🤖 Bot ${mockClients.length + 1}`;
-    const bot = new MockPlayerClient(botName, roomState.roomCode);
-    bot.connect();
-    setMockClients((prev) => [...prev, bot]);
-  }, [roomState?.roomCode, mockClients.length]);
-
   const handleBackToHome = useCallback(() => {
     setScreen("home");
     setIsStartingGame(false);
-    mockClients.forEach(client => client.disconnect());
-    setMockClients([]);
-  }, [mockClients]);
+  }, []);
 
   const phase = roomState?.phase ?? "lobby";
   const players = roomState?.players ?? [];
@@ -163,7 +151,6 @@ function App() {
             myPlayerId={myPlayerId}
             isStartingGame={isStartingGame}
             onStartGame={handleStartGame}
-            onAddMockPlayer={handleAddMockPlayer}
             onBack={handleBackToHome}
           />
         )}
