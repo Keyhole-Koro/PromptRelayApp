@@ -919,6 +919,7 @@ button:disabled {
 
 .join-row input {
   flex: 1;
+  min-width: 0;
   font-family: var(--font-heading);
   font-size: 18px;
   letter-spacing: 0.15em;
@@ -927,7 +928,10 @@ button:disabled {
 
 .join-row .start-btn {
   flex: 0 0 auto;
-  min-width: 120px;
+  width: auto;
+  min-width: 92px;
+  padding: 10px 14px;
+  font-size: 14px;
   white-space: nowrap;
 }
 

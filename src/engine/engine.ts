@@ -14,7 +14,7 @@ import type { RoomState } from "../domain/types.js";
 import type { GameEvent } from "../domain/events.js";
 import { initialRoomState } from "../domain/types.js";
 import { reduce } from "../domain/reducer.js";
-import { pickTopicFromPool, markTopicUsed } from "../infra/topicPool.js";
+import { pickTopicFromPool } from "../infra/topicPool.js";
 import { randomUUID } from "node:crypto";
 
 export type BroadcastFn = (state: RoomState, event: GameEvent) => void;
@@ -230,11 +230,9 @@ export class GameEngine {
         });
 
         try {
-            const playerResult = await this.worker.generateImage({
+            const playerResult = await this.worker.generatePlayerImage({
                 requestId,
-                kind: "player",
                 prompt,
-                isFinal,
             });
 
             this.dispatch({
@@ -270,11 +268,16 @@ export class GameEngine {
         });
 
         try {
-            const aiResult = await this.worker.generateImage({
+            // Get the most recent player image URL for the AI to reference
+            const latestPlayerImage = this.state.playerImages[this.state.playerImages.length - 1];
+            const themeImageUrl = this.state.topicImageUrl ?? "";
+            const recentImageUrl = latestPlayerImage?.url ?? themeImageUrl;
+
+            const aiResult = await this.worker.generateAiImage({
                 requestId: aiRequestId,
-                kind: "ai",
-                prompt,
-                isFinal,
+                themeImageUrl,
+                recentImageUrl,
+                recentPrompt: prompt,
             });
 
             this.dispatch({
@@ -283,7 +286,7 @@ export class GameEngine {
                 requestId: aiRequestId,
                 seq: aiSeq,
                 kind: "ai",
-                prompt,
+                prompt: aiResult.prompt,
                 imageUrl: aiResult.imageUrl,
                 isFinal,
             });

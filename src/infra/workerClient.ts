@@ -15,14 +15,21 @@ interface WorkerGenerateResponse {
     };
 }
 
-export interface ImageGenerateRequest {
+export interface PlayerImageRequest {
     requestId: string;
-    kind: "player" | "ai";
     prompt: string;
-    isFinal: boolean;
 }
+
+export interface AiImageRequest {
+    requestId: string;
+    themeImageUrl: string;
+    recentImageUrl: string;
+    recentPrompt: string;
+}
+
 export interface ImageGenerateResponse {
     imageUrl: string;
+    prompt: string;
 }
 
 export interface ScoreRequest {
@@ -40,7 +47,8 @@ export interface ScoreResponse {
 
 export interface WorkerClient {
     generateTopic(req: TopicGenerateRequest): Promise<TopicGenerateResponse>;
-    generateImage(req: ImageGenerateRequest): Promise<ImageGenerateResponse>;
+    generatePlayerImage(req: PlayerImageRequest): Promise<ImageGenerateResponse>;
+    generateAiImage(req: AiImageRequest): Promise<ImageGenerateResponse>;
     calculateScore(req: ScoreRequest): Promise<ScoreResponse>;
 }
 
@@ -71,13 +79,28 @@ export class HttpWorkerClient implements WorkerClient {
         };
     }
 
-    async generateImage(req: ImageGenerateRequest): Promise<ImageGenerateResponse> {
-        const res = await fetch(`${WORKER_BASE}/preview`, {
+    async generatePlayerImage(req: PlayerImageRequest): Promise<ImageGenerateResponse> {
+        const res = await fetch(`${WORKER_BASE}/playerPreview`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(req),
+            body: JSON.stringify({ requestId: req.requestId, prompt: req.prompt }),
         });
-        if (!res.ok) throw new Error(`Worker preview failed: ${res.status}`);
+        if (!res.ok) throw new Error(`Worker playerPreview failed: ${res.status}`);
+        return (await res.json()) as ImageGenerateResponse;
+    }
+
+    async generateAiImage(req: AiImageRequest): Promise<ImageGenerateResponse> {
+        const res = await fetch(`${WORKER_BASE}/aiPreview`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                requestId: req.requestId,
+                themeImageUrl: normalizeImageUrlForJudge(req.themeImageUrl),
+                recentImageUrl: normalizeImageUrlForJudge(req.recentImageUrl),
+                recentPrompt: req.recentPrompt,
+            }),
+        });
+        if (!res.ok) throw new Error(`Worker aiPreview failed: ${res.status}`);
         return (await res.json()) as ImageGenerateResponse;
     }
 
@@ -112,7 +135,8 @@ export class HttpWorkerClient implements WorkerClient {
 
 export class FakeWorkerClient implements WorkerClient {
     topicCalls: TopicGenerateRequest[] = [];
-    imageCalls: ImageGenerateRequest[] = [];
+    playerImageCalls: PlayerImageRequest[] = [];
+    aiImageCalls: AiImageRequest[] = [];
     scoreCalls: ScoreRequest[] = [];
 
     /** Delay in ms to simulate async work. Set to 0 for sync tests. */
@@ -125,6 +149,7 @@ export class FakeWorkerClient implements WorkerClient {
 
     imageResponse: ImageGenerateResponse = {
         imageUrl: "https://fake.test/image.png",
+        prompt: "fake prompt",
     };
 
     scoreResponse: ScoreResponse = {
@@ -150,10 +175,17 @@ export class FakeWorkerClient implements WorkerClient {
         return { ...this.topicResponse };
     }
 
-    async generateImage(req: ImageGenerateRequest): Promise<ImageGenerateResponse> {
-        this.imageCalls.push(req);
+    async generatePlayerImage(req: PlayerImageRequest): Promise<ImageGenerateResponse> {
+        this.playerImageCalls.push(req);
         await this.maybeDelay();
-        if (this.shouldFail) throw new Error("Fake worker image failure");
+        if (this.shouldFail) throw new Error("Fake worker player image failure");
+        return { ...this.imageResponse };
+    }
+
+    async generateAiImage(req: AiImageRequest): Promise<ImageGenerateResponse> {
+        this.aiImageCalls.push(req);
+        await this.maybeDelay();
+        if (this.shouldFail) throw new Error("Fake worker AI image failure");
         return { ...this.imageResponse };
     }
 
