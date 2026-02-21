@@ -244,6 +244,7 @@ export class GameEngine {
                 requestId,
                 seq,
                 kind: "player",
+                prompt,
                 imageUrl: playerResult.imageUrl,
                 isFinal,
             });
@@ -283,6 +284,7 @@ export class GameEngine {
                 requestId: aiRequestId,
                 seq: aiSeq,
                 kind: "ai",
+                prompt,
                 imageUrl: aiResult.imageUrl,
                 isFinal,
             });
@@ -305,34 +307,61 @@ export class GameEngine {
             timestamp: this.clock.now(),
         });
 
-        // Get latest final images for scoring
-        const playerImg = this.getLatestFinalImage("player");
-        const aiImg = this.getLatestFinalImage("ai");
+        // Just enter the "selecting" phase
+        // The frontend will now call selectImage(playerId, seq)
+    }
 
-        if (playerImg && aiImg) {
-            try {
-                const scoreResult = await this.worker.calculateScore({
-                    playerImageUrl: playerImg.url,
-                    aiImageUrl: aiImg.url,
-                });
-                this.dispatch({
-                    type: "SCORED",
-                    timestamp: this.clock.now(),
-                    cosine: scoreResult.cosine,
-                    score100: scoreResult.score100,
-                });
-            } catch (err) {
-                this.dispatch({
-                    type: "ERROR",
-                    timestamp: this.clock.now(),
-                    message: `Scoring failed: ${err instanceof Error ? err.message : String(err)}`,
-                });
-            }
-        } else {
+    async selectImage(playerId: string, seq: number): Promise<void> {
+        if (this.state.phase !== "selecting") return;
+
+        // Find the selected player image
+        const playerImg = this.state.playerImages.find((img) => img.seq === seq);
+        if (!playerImg) {
             this.dispatch({
                 type: "ERROR",
                 timestamp: this.clock.now(),
-                message: "No final images available for scoring",
+                message: `Selected image seq ${seq} not found`,
+            });
+            return;
+        }
+
+        // Find the AI image generated with the *exact same* prompt
+        // Note: we want the final AI image for that prompt if it exists, otherwise just match by prompt
+        const aiImg = this.state.aiImages.find((img) => img.prompt === playerImg.prompt && img.isFinal)
+            ?? this.state.aiImages.find((img) => img.prompt === playerImg.prompt);
+
+        if (!aiImg) {
+            this.dispatch({
+                type: "ERROR",
+                timestamp: this.clock.now(),
+                message: `Could not find a matching AI image for the selected image's prompt`,
+            });
+            return;
+        }
+
+        this.dispatch({
+            type: "IMAGE_SELECTED",
+            timestamp: this.clock.now(),
+            playerId,
+            selectedSeq: seq,
+        });
+
+        try {
+            const scoreResult = await this.worker.calculateScore({
+                playerImageUrl: playerImg.url,
+                aiImageUrl: aiImg.url,
+            });
+            this.dispatch({
+                type: "SCORED",
+                timestamp: this.clock.now(),
+                cosine: scoreResult.cosine,
+                score100: scoreResult.score100,
+            });
+        } catch (err) {
+            this.dispatch({
+                type: "ERROR",
+                timestamp: this.clock.now(),
+                message: `Scoring failed: ${err instanceof Error ? err.message : String(err)}`,
             });
         }
     }

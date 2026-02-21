@@ -26,6 +26,7 @@ export function GameBoard({
                     title="🎯 お題"
                     imageUrl={topicImageUrl}
                     placeholder="お題画像を待機中"
+                    labelTone="topic"
                 />
                 {topicText && (
                     <p className="meta" style={{ marginTop: 8 }}>
@@ -35,17 +36,19 @@ export function GameBoard({
             </div>
 
             <ImagePanel
-                title="🖼 プレイヤー画像"
+                title="🖼 プレイヤー"
                 imageUrl={latestUrl(playerImages)}
                 placeholder="生成待機中"
+                labelTone="player"
             />
 
             <ImagePanel
-                title="🤖 AIリアルタイム"
+                title="🤖 AI"
                 imageUrl={latestUrl(aiImages)}
                 placeholder="生成待機中"
                 size="small"
                 className="ai-panel"
+                labelTone="ai"
             />
         </section>
     );

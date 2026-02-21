@@ -5,25 +5,28 @@ interface TurnCountdownProps {
     players: PlayerInfo[];
     turn: TurnState | null;
     phase: Phase;
+    myPlayerId: string | null;
     onCountdownActive: (isActive: boolean, isFirstTurnCountdown?: boolean) => void;
 }
 
 const STEPS = ["name", "3", "2", "1", "GO!"] as const;
 
-export function TurnCountdown({ players, turn, phase, onCountdownActive }: TurnCountdownProps) {
+export function TurnCountdown({ players, turn, phase, myPlayerId, onCountdownActive }: TurnCountdownProps) {
     const [step, setStep] = useState<number>(-1);
-    const [targetName, setTargetName] = useState<string | null>(null);
+    const [targetPlayerId, setTargetPlayerId] = useState<string | null>(null);
     const [isFirstTurn, setIsFirstTurn] = useState<boolean>(false);
     const [isGameOver, setIsGameOver] = useState<boolean>(false);
 
     // Keep track so we don't spam the callback
     const isActiveRef = useRef(false);
+    const isFirstDimmedRef = useRef(false);
 
     useEffect(() => {
         if (phase !== "playing" && phase !== "scoring") {
             setStep(-1);
             if (isActiveRef.current) {
                 isActiveRef.current = false;
+                isFirstDimmedRef.current = false;
                 onCountdownActive(false, false);
             }
             return;
@@ -45,38 +48,27 @@ export function TurnCountdown({ players, turn, phase, onCountdownActive }: TurnC
                 if (timeUntilStart <= firstTurnDuration && timeUntilStart > -1000) {
                     // We are in the countdown window
                     const firstPlayerId = turn.order[turn.currentPlayerIndex];
-                    const firstPlayer = players.find(p => p.id === firstPlayerId);
 
-                    if (targetName !== firstPlayer?.name) {
-                        setTargetName(firstPlayer?.name ?? "Player");
+                    if (targetPlayerId !== firstPlayerId) {
+                        setTargetPlayerId(firstPlayerId ?? null);
                         setIsFirstTurn(true);
                         setIsGameOver(false);
                     }
 
-                    if (!isActiveRef.current) {
+                    const shouldBeDimmed = timeUntilStart > 0;
+                    if (!isActiveRef.current || isFirstDimmedRef.current !== shouldBeDimmed) {
                         isActiveRef.current = true;
-                        onCountdownActive(true, true);
+                        isFirstDimmedRef.current = shouldBeDimmed;
+                        onCountdownActive(true, shouldBeDimmed);
                     }
 
                     // Determine step based on timeUntilStart (counting down to 0)
-                    // timeUntilStart: 5500 -> 4000 (name) -> 3000 (3) -> 2000 (2) -> 1000 (1) -> 0 (GO!) -> -1000 (Done)
-                    if (timeUntilStart > 4000) setStep(0); // name (1.5s)
-                    else if (timeUntilStart > 3000) setStep(1); // 3 (1s)
-                    else if (timeUntilStart > 2000) setStep(2); // 2 (1s)
-                    else if (timeUntilStart > 1000) setStep(3); // 1 (1s)
-                    else if (timeUntilStart > 0) setStep(4); // GO! (1s, ending exactly at 0)
-                    else {
-                        // We are in the -1000 to 0 range (GO! phase actually extends slightly past 0 if we want it to linger)
-                        // Actually, if we want GO! to linger for 1s AFTER the turn starts:
-                        // Let's make GO! disappear exactly when the turn starts, OR linger for 1s.
-                        // "GO! (1s, ending exactly at 0)" means it's visible from 1000ms until 0ms.
-                        // Let's let it peek past 0 for a bit.
-                    }
-
-                    // Let GO linger for 1 second after 0
-                    if (timeUntilStart <= 0 && timeUntilStart > -1000) {
-                        setStep(4); // GO!
-                    }
+                    // timeUntilStart: 4500 -> 3000 (name) -> 2000 (3) -> 1000 (2) -> 0 (1) -> -1000 (GO!)
+                    if (timeUntilStart > 3000) setStep(0); // name (1.5s)
+                    else if (timeUntilStart > 2000) setStep(1); // 3 (1s)
+                    else if (timeUntilStart > 1000) setStep(2); // 2 (1s)
+                    else if (timeUntilStart > 0) setStep(3); // 1 (1s)
+                    else if (timeUntilStart > -1000) setStep(4); // GO! (1s, ending EXACTLY 1s after turn starts)
 
                     rafId = requestAnimationFrame(updateClock);
                     return;
@@ -94,31 +86,31 @@ export function TurnCountdown({ players, turn, phase, onCountdownActive }: TurnC
                     if (isOver) {
                         if (!isGameOver) {
                             setIsGameOver(true);
-                            setTargetName(null);
+                            setTargetPlayerId(null);
                         }
                     } else {
                         const nextPlayerId = turn.order[nextIndex];
-                        const nextPlayer = players.find(p => p.id === nextPlayerId);
-                        if (targetName !== nextPlayer?.name) {
-                            setTargetName(nextPlayer?.name ?? "Player");
+                        if (targetPlayerId !== nextPlayerId) {
+                            setTargetPlayerId(nextPlayerId);
                             setIsGameOver(false);
                         }
                     }
 
                     if (isFirstTurn) setIsFirstTurn(false);
 
-                    if (!isActiveRef.current) {
+                    const shouldBeDimmed = false;
+                    if (!isActiveRef.current || isFirstDimmedRef.current !== shouldBeDimmed) {
                         isActiveRef.current = true;
-                        onCountdownActive(true, false);
+                        isFirstDimmedRef.current = shouldBeDimmed;
+                        onCountdownActive(true, shouldBeDimmed);
                     }
 
-                    // remaining: 5000 -> 4000 (name) -> 3000 (3) -> 2000 (2) -> 1000 (1) -> 0 (GO!)
-                    if (remaining > 4000) setStep(0); // name (1s)
-                    else if (remaining > 3000) setStep(1); // 3
-                    else if (remaining > 2000) setStep(2); // 2
-                    else if (remaining > 1000) setStep(3); // 1
-                    else if (remaining > 0) setStep(4); // GO!
-                    else if (remaining > -1000) setStep(4); // Linger GO! for 1s into the next turn
+                    // remaining: 5000 -> 3000 (name) -> 2000 (3) -> 1000 (2) -> 0 (1) -> -1000 (GO!)
+                    if (remaining > 3000) setStep(0); // name (2s)
+                    else if (remaining > 2000) setStep(1); // 3
+                    else if (remaining > 1000) setStep(2); // 2
+                    else if (remaining > 0) setStep(3); // 1
+                    else if (remaining > -1000) setStep(4); // GO!
 
                     rafId = requestAnimationFrame(updateClock);
                     return;
@@ -131,6 +123,7 @@ export function TurnCountdown({ players, turn, phase, onCountdownActive }: TurnC
             }
             if (isActiveRef.current) {
                 isActiveRef.current = false;
+                isFirstDimmedRef.current = false;
                 onCountdownActive(false, false);
             }
 
@@ -144,6 +137,7 @@ export function TurnCountdown({ players, turn, phase, onCountdownActive }: TurnC
             cancelAnimationFrame(rafId);
             if (isActiveRef.current) {
                 isActiveRef.current = false;
+                isFirstDimmedRef.current = false;
                 onCountdownActive(false, false);
             }
         };
@@ -153,11 +147,18 @@ export function TurnCountdown({ players, turn, phase, onCountdownActive }: TurnC
 
     const currentStep = STEPS[step];
 
+    const targetPlayer = players.find(p => p.id === targetPlayerId);
+    const targetNameStr = targetPlayer?.name ?? "Player";
+    const isTargetMe = targetPlayerId !== null && targetPlayerId === myPlayerId;
+
     let displayText: string = currentStep;
     if (currentStep === "name") {
         if (isGameOver) displayText = "最終結果へ！";
-        else if (isFirstTurn) displayText = `最初は… ${targetName} の番！`;
-        else displayText = `次は… ${targetName}`;
+        else if (isFirstTurn) {
+            displayText = isTargetMe ? "最初は… あなたの番！" : `最初は… ${targetNameStr} の番！`;
+        } else {
+            displayText = isTargetMe ? "次は… あなた！" : `次は… ${targetNameStr}`;
+        }
     } else if (currentStep === "GO!" && isGameOver) {
         displayText = "終了！";
     }

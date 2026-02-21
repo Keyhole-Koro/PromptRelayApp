@@ -1,6 +1,6 @@
 // ─── Domain Types ───────────────────────────────────────────────
 
-export type Phase = "lobby" | "playing" | "scoring" | "done";
+export type Phase = "lobby" | "playing" | "selecting" | "scoring" | "done";
 
 export interface PlayerInfo {
     id: string;
@@ -19,6 +19,7 @@ export interface ImageRecord {
     requestId: string;
     seq: number;
     kind: "player" | "ai";
+    prompt: string;
     isFinal: boolean;
 }
 
@@ -44,6 +45,7 @@ export interface RoomState {
     playerImages: ImageRecord[];
     aiImages: ImageRecord[];
     lastProcessedSeq: number; // for stale IMAGE_READY rejection
+    selectedImageSeq: number | null;
     topicImageUrl: string | null;
     topicText: string | null;
     score: ScoreResult | null;
@@ -60,6 +62,7 @@ export function initialRoomState(roomCode: string): RoomState {
         playerImages: [],
         aiImages: [],
         lastProcessedSeq: 0,
+        selectedImageSeq: null,
         topicImageUrl: null,
         topicText: null,
         score: null,

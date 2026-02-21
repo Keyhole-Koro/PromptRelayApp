@@ -3,6 +3,7 @@ import type { PlayerInfo } from "../types";
 interface LobbyScreenProps {
     roomCode: string;
     players: PlayerInfo[];
+    myPlayerId: string | null;
     onStartGame: () => void;
     onAddMockPlayer: () => void;
     onBack: () => void;
@@ -11,10 +12,15 @@ interface LobbyScreenProps {
 export function LobbyScreen({
     roomCode,
     players,
+    myPlayerId,
     onStartGame,
     onAddMockPlayer,
     onBack,
 }: LobbyScreenProps) {
+    const hostPlayerId = players[0]?.id ?? null;
+    const isHost = !!myPlayerId && myPlayerId === hostPlayerId;
+    const canStart = isHost && players.length >= 2;
+
     return (
         <div className="lobby-screen">
             <button className="back-btn" onClick={onBack}>
@@ -65,9 +71,24 @@ export function LobbyScreen({
             <button
                 className="start-btn lobby-start-btn"
                 onClick={onStartGame}
+                disabled={!canStart}
+                title={
+                    !isHost
+                        ? "ホストのみ開始できます"
+                        : players.length < 2
+                            ? "2人以上で開始できます"
+                            : undefined
+                }
             >
                 ▶ ゲーム開始
             </button>
+            <p className="meta" style={{ textAlign: "center", marginTop: 8 }}>
+                {!isHost
+                    ? "ホストのみゲーム開始できます"
+                    : players.length < 2
+                        ? "ゲーム開始には2人以上必要です"
+                        : "開始できます"}
+            </p>
         </div>
     );
 }

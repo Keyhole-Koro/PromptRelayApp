@@ -55,6 +55,7 @@ export interface ImageReadyEvent {
     requestId: string;
     seq: number;
     kind: "player" | "ai";
+    prompt: string;
     imageUrl: string;
     isFinal: boolean;
 }
@@ -89,6 +90,13 @@ export interface ReactionEvent {
     reaction: string;
 }
 
+export interface ImageSelectedEvent {
+    type: "IMAGE_SELECTED";
+    timestamp: number;
+    playerId: string;
+    selectedSeq: number;
+}
+
 export type GameEvent =
     | RoomCreatedEvent
     | PlayerJoinedEvent
@@ -102,4 +110,5 @@ export type GameEvent =
     | RoundCompletedEvent
     | ScoredEvent
     | ErrorEvent
-    | ReactionEvent;
+    | ReactionEvent
+    | ImageSelectedEvent;

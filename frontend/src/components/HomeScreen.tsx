@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TutorialScreen } from "./TutorialScreen";
 
 type Mode = "select" | "solo" | "multi";
 
@@ -12,6 +13,7 @@ export function HomeScreen({ onSoloPlay, onCreateRoom, onJoinRoom }: HomeScreenP
     const [mode, setMode] = useState<Mode>("select");
     const [name, setName] = useState("");
     const [roomCode, setRoomCode] = useState("");
+    const [showTutorial, setShowTutorial] = useState(false);
 
     const playerName = name.trim() || "Player";
 
@@ -40,6 +42,14 @@ export function HomeScreen({ onSoloPlay, onCreateRoom, onJoinRoom }: HomeScreenP
                         <span className="mode-desc">ルームを作成 or 参加</span>
                     </button>
                 </div>
+
+                <div className="home-tutorial-section">
+                    <button className="tutorial-open-btn" onClick={() => setShowTutorial(true)}>
+                        📖 遊び方を見る
+                    </button>
+                </div>
+
+                {showTutorial && <TutorialScreen onClose={() => setShowTutorial(false)} />}
             </div>
         );
     }

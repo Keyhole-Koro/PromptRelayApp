@@ -1,4 +1,4 @@
-export type Phase = "lobby" | "playing" | "scoring" | "done";
+export type Phase = "lobby" | "playing" | "selecting" | "scoring" | "done";
 
 export interface PlayerInfo {
     id: string;
@@ -19,6 +19,7 @@ export interface ImageRecord {
     requestId: string;
     seq: number;
     kind: "player" | "ai";
+    prompt: string;
     isFinal: boolean;
 }
 
@@ -47,6 +48,7 @@ export interface RoomState {
     prompts: PromptEntry[];
     playerImages: ImageRecord[];
     aiImages: ImageRecord[];
+    selectedImageSeq: number | null;
     topicImageUrl: string | null;
     topicText: string | null;
     score: ScoreResult | null;

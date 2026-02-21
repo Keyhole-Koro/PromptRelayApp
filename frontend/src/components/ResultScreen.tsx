@@ -24,8 +24,10 @@ function getScoreLabel(score: number): string {
 export function ResultScreen({ roomState, onBackToHome }: ResultScreenProps) {
     if (!roomState) return null;
 
-    const { topicImageUrl, topicText, aiImages, prompts, score, players } = roomState;
-    const finalImage = aiImages.length > 0 ? aiImages[aiImages.length - 1] : null;
+    const { topicImageUrl, topicText, aiImages, prompts, score, players, selectedImageSeq } = roomState;
+    const finalImage = selectedImageSeq
+        ? aiImages.find(img => img.seq === selectedImageSeq && img.isFinal) ?? aiImages.find(img => img.seq === selectedImageSeq)
+        : (aiImages.length > 0 ? aiImages[aiImages.length - 1] : null);
     const scoreVal = score?.score100 ?? 0;
     const cosineVal = score?.cosine ?? 0;
     const breakdown = score?.breakdown;

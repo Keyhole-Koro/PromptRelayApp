@@ -84,6 +84,7 @@ export function reduce(state: RoomState, event: GameEvent): RoomState {
                 requestId: event.requestId,
                 seq: event.seq,
                 kind: event.kind,
+                prompt: event.prompt,
                 isFinal: event.isFinal,
             };
 
@@ -119,7 +120,14 @@ export function reduce(state: RoomState, event: GameEvent): RoomState {
         }
 
         case "ROUND_COMPLETED":
-            return { ...state, phase: "scoring", turn: null };
+            return { ...state, phase: "selecting", turn: null };
+
+        case "IMAGE_SELECTED":
+            return {
+                ...state,
+                phase: "scoring",
+                selectedImageSeq: event.selectedSeq
+            };
 
         case "SCORED":
             return {

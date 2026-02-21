@@ -12,6 +12,7 @@ import { ReactionFAB } from "./components/ReactionFAB";
 import { MockPlayerClient } from "./utils/MockPlayer";
 import { ResultScreen } from "./components/ResultScreen";
 import { TurnCountdown } from "./components/TurnCountdown";
+import { ImageSelectionScreen } from "./components/ImageSelectionScreen";
 
 type Screen = "home" | "lobby" | "game";
 
@@ -38,9 +39,9 @@ function App() {
       .catch(() => setVersion("unavailable"));
   }, []);
 
-  // Auto-transition: when phase becomes "playing", switch to game screen
+  // Auto-transition: when phase becomes "playing", "selecting", "scoring", "done" switch to game screen
   useEffect(() => {
-    if (roomState?.phase === "playing" || roomState?.phase === "scoring" || roomState?.phase === "done") {
+    if (roomState?.phase === "playing" || roomState?.phase === "selecting" || roomState?.phase === "scoring" || roomState?.phase === "done") {
       setScreen("game");
       setPendingSolo(false);
     }
@@ -96,6 +97,13 @@ function App() {
     [send]
   );
 
+  const handleSelectImage = useCallback(
+    (seq: number) => {
+      send({ action: "select_image", seq });
+    },
+    [send]
+  );
+
   const handleAddMockPlayer = useCallback(() => {
     if (!roomState?.roomCode) return;
     const botName = `🤖 Bot ${mockClients.length + 1}`;
@@ -119,7 +127,7 @@ function App() {
     ? players.find((p) => p.id === currentPlayerId) ?? null
     : null;
   const isMyTurn = currentPlayer?.id === myPlayerId;
-  const isPromptDisabled = phase === "scoring" || phase === "done" || !isMyTurn;
+  const isPromptDisabled = phase === "selecting" || phase === "scoring" || phase === "done" || !isMyTurn;
   const fullPrompt = (roomState?.prompts ?? []).map((p) => p.delta).join("");
 
   return (
@@ -130,6 +138,7 @@ function App() {
         players={players}
         turn={roomState?.turn ?? null}
         phase={phase}
+        myPlayerId={myPlayerId}
         onCountdownActive={handleCountdownActive}
       />
       {phase === "playing" && (
@@ -148,6 +157,7 @@ function App() {
           <LobbyScreen
             roomCode={roomState?.roomCode ?? "---"}
             players={players}
+            myPlayerId={myPlayerId}
             onStartGame={handleStartGame}
             onAddMockPlayer={handleAddMockPlayer}
             onBack={handleBackToHome}
@@ -194,6 +204,13 @@ function App() {
               <ResultScreen
                 roomState={roomState}
                 onBackToHome={handleBackToHome}
+              />
+            )}
+
+            {phase === "selecting" && (
+              <ImageSelectionScreen
+                images={roomState?.playerImages ?? []}
+                onSelectImage={handleSelectImage}
               />
             )}
           </div>

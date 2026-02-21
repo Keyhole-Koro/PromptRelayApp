@@ -18,12 +18,11 @@ export function PromptInput({ disabled, isMyTurn, fullPrompt, onSendDelta }: Pro
     }, [disabled, isMyTurn, draft, onSendDelta]);
 
     useEffect(() => {
-        if (disabled || !isMyTurn || !draft.trim()) return;
-        const t = setTimeout(() => {
-            flushDraft();
-        }, 300);
-        return () => clearTimeout(t);
-    }, [disabled, isMyTurn, draft, flushDraft]);
+        if (!disabled && isMyTurn) return;
+        if (!draft.trim()) return;
+        onSendDelta(draft);
+        setDraft("");
+    }, [disabled, isMyTurn, draft, onSendDelta]);
 
     return (
         <section className={`prompt card ${isMyTurn && !disabled ? "my-turn" : ""}`}>
@@ -45,6 +44,7 @@ export function PromptInput({ disabled, isMyTurn, fullPrompt, onSendDelta }: Pro
                         setDraft("");
                     }
                 }}
+                onBlur={flushDraft}
                 readOnly={disabled || !isMyTurn}
                 className={isMyTurn && !disabled ? "active-input is-typing" : "active-input"}
             />

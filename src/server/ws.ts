@@ -35,7 +35,12 @@ interface SendReactionMsg {
     reaction: string;
 }
 
-type ClientMessage = CreateRoomMsg | JoinRoomMsg | StartGameMsg | UpdatePromptMsg | SendReactionMsg;
+interface SelectImageMsg {
+    action: "select_image";
+    seq: number;
+}
+
+type ClientMessage = CreateRoomMsg | JoinRoomMsg | StartGameMsg | UpdatePromptMsg | SendReactionMsg | SelectImageMsg;
 
 // ── Server → Client messages ──
 
@@ -204,6 +209,11 @@ function handleMessage(
                 send(conn.ws, { type: "error", message: "Room not found" });
                 return;
             }
+            const hostPlayerId = engine.state.players[0]?.id ?? null;
+            if (!hostPlayerId || conn.playerId !== hostPlayerId) {
+                send(conn.ws, { type: "error", message: "Only the host can start the game" });
+                return;
+            }
             // Fire and forget — errors are dispatched as ERROR events
             engine.startGame().catch(() => { });
             break;
@@ -242,6 +252,20 @@ function handleMessage(
                 timestamp: Date.now(),
                 reaction: msg.reaction,
             });
+            break;
+        }
+
+        case "select_image": {
+            if (!conn.roomCode) {
+                send(conn.ws, { type: "error", message: "Not in a room" });
+                return;
+            }
+            const engine = roomManager.getRoom(conn.roomCode);
+            if (!engine) {
+                send(conn.ws, { type: "error", message: "Room not found" });
+                return;
+            }
+            engine.selectImage(conn.playerId, msg.seq).catch(() => { });
             break;
         }
 
