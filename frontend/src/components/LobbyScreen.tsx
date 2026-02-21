@@ -4,6 +4,7 @@ interface LobbyScreenProps {
     roomCode: string;
     players: PlayerInfo[];
     onStartGame: () => void;
+    onAddMockPlayer: () => void;
     onBack: () => void;
 }
 
@@ -11,6 +12,7 @@ export function LobbyScreen({
     roomCode,
     players,
     onStartGame,
+    onAddMockPlayer,
     onBack,
 }: LobbyScreenProps) {
     return (
@@ -48,6 +50,16 @@ export function LobbyScreen({
                         ))}
                     </ul>
                 )}
+
+                <div style={{ marginTop: "16px", textAlign: "center" }}>
+                    <button
+                        className="btn-outline"
+                        onClick={onAddMockPlayer}
+                        style={{ fontSize: "12px", padding: "8px 12px" }}
+                    >
+                        🤖 CPUを追加 (テスト用)
+                    </button>
+                </div>
             </div>
 
             <button

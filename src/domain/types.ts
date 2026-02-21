@@ -31,6 +31,7 @@ export interface TurnState {
     currentPlayerIndex: number;
     startedAt: number;
     durationMs: number; // 30_000
+    order: string[];    // ordered playerIds for this game
     seq: number;        // monotonic counter for IMAGE_REQUESTED ordering
 }
 

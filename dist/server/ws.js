@@ -1,107 +1,34 @@
 // ─── WebSocket Protocol Handler ─────────────────────────────────
-
-import { WebSocketServer, type WebSocket } from "ws";
-import type { IncomingMessage } from "node:http";
-import type { Server as HttpServer } from "node:http";
-import type { RoomManager } from "../engine/roomManager.js";
-import type { RoomState } from "../domain/types.js";
-import type { GameEvent } from "../domain/events.js";
+import { WebSocketServer } from "ws";
 import { randomUUID } from "node:crypto";
-
-// ── Client → Server messages ──
-
-interface CreateRoomMsg {
-    action: "create_room";
-    playerName: string;
-}
-
-interface JoinRoomMsg {
-    action: "join_room";
-    roomCode: string;
-    playerName: string;
-}
-
-interface StartGameMsg {
-    action: "start_game";
-}
-
-interface UpdatePromptMsg {
-    action: "update_prompt";
-    delta: string;
-}
-
-interface SendReactionMsg {
-    action: "send_reaction";
-    reaction: string;
-}
-
-type ClientMessage = CreateRoomMsg | JoinRoomMsg | StartGameMsg | UpdatePromptMsg | SendReactionMsg;
-
-// ── Server → Client messages ──
-
-interface RoomStateMsg {
-    type: "room_state";
-    state: RoomState;
-}
-
-interface EventMsg {
-    type: "event";
-    event: GameEvent;
-}
-
-interface ErrorMsg {
-    type: "error";
-    message: string;
-}
-
-interface ConnectedMsg {
-    type: "connected";
-    playerId: string;
-}
-
-type ServerMessage = RoomStateMsg | EventMsg | ErrorMsg | ConnectedMsg;
-
-// ── Connection state ──
-
-interface ConnectionState {
-    ws: WebSocket;
-    roomCode: string | null;
-    playerId: string;
-}
-
-function send(ws: WebSocket, msg: ServerMessage): void {
+function send(ws, msg) {
     if (ws.readyState === ws.OPEN) {
         ws.send(JSON.stringify(msg));
     }
 }
-
-export function setupWebSocket(server: HttpServer, roomManager: RoomManager): WebSocketServer {
+export function setupWebSocket(server, roomManager) {
     const wss = new WebSocketServer({ server, path: "/ws" });
-
     // Track all connections per room for broadcasting
-    const roomConnections = new Map<string, Set<ConnectionState>>();
-
-    wss.on("connection", (ws: WebSocket, _req: IncomingMessage) => {
-        const conn: ConnectionState = {
+    const roomConnections = new Map();
+    wss.on("connection", (ws, _req) => {
+        const conn = {
             ws,
             roomCode: null,
             playerId: randomUUID(),
         };
-
         send(ws, { type: "connected", playerId: conn.playerId });
-
         ws.on("message", (data) => {
             try {
-                const msg = JSON.parse(String(data)) as ClientMessage;
+                const msg = JSON.parse(String(data));
                 handleMessage(conn, msg, roomManager, roomConnections);
-            } catch (err) {
+            }
+            catch (err) {
                 send(ws, {
                     type: "error",
                     message: `Invalid message: ${err instanceof Error ? err.message : String(err)}`,
                 });
             }
         });
-
         ws.on("close", () => {
             if (conn.roomCode) {
                 const conns = roomConnections.get(conn.roomCode);
@@ -114,41 +41,31 @@ export function setupWebSocket(server: HttpServer, roomManager: RoomManager): We
             }
         });
     });
-
     return wss;
 }
-
-function handleMessage(
-    conn: ConnectionState,
-    msg: ClientMessage,
-    roomManager: RoomManager,
-    roomConnections: Map<string, Set<ConnectionState>>,
-): void {
+function handleMessage(conn, msg, roomManager, roomConnections) {
     switch (msg.action) {
         case "create_room": {
-            const broadcast = (state: RoomState, event: GameEvent) => {
+            const broadcast = (state, event) => {
                 const conns = roomConnections.get(state.roomCode);
-                if (!conns) return;
+                if (!conns)
+                    return;
                 for (const c of conns) {
                     send(c.ws, { type: "room_state", state });
                     send(c.ws, { type: "event", event });
                 }
             };
-
             const engine = roomManager.createRoom(broadcast);
             conn.roomCode = engine.state.roomCode;
-
             // Register connection
             if (!roomConnections.has(conn.roomCode)) {
                 roomConnections.set(conn.roomCode, new Set());
             }
-            roomConnections.get(conn.roomCode)!.add(conn);
-
+            roomConnections.get(conn.roomCode).add(conn);
             // Join the creator
             engine.joinRoom(conn.playerId, msg.playerName);
             break;
         }
-
         case "join_room": {
             const engine = roomManager.getRoom(msg.roomCode);
             if (!engine) {
@@ -156,17 +73,14 @@ function handleMessage(
                 return;
             }
             conn.roomCode = msg.roomCode;
-
             // Register connection
             if (!roomConnections.has(msg.roomCode)) {
                 roomConnections.set(msg.roomCode, new Set());
             }
-            roomConnections.get(msg.roomCode)!.add(conn);
-
+            roomConnections.get(msg.roomCode).add(conn);
             engine.joinRoom(conn.playerId, msg.playerName);
             break;
         }
-
         case "start_game": {
             if (!conn.roomCode) {
                 send(conn.ws, { type: "error", message: "Not in a room" });
@@ -181,7 +95,6 @@ function handleMessage(
             engine.startGame().catch(() => { });
             break;
         }
-
         case "update_prompt": {
             if (!conn.roomCode) {
                 send(conn.ws, { type: "error", message: "Not in a room" });
@@ -198,7 +111,6 @@ function handleMessage(
             }
             break;
         }
-
         case "send_reaction": {
             if (!conn.roomCode) {
                 send(conn.ws, { type: "error", message: "Not in a room" });
@@ -217,9 +129,9 @@ function handleMessage(
             });
             break;
         }
-
         default: {
             send(conn.ws, { type: "error", message: "Unknown action" });
         }
     }
 }
+//# sourceMappingURL=ws.js.map

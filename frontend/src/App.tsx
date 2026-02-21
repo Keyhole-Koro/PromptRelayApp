@@ -9,9 +9,9 @@ import { Particles } from "./components/Particles";
 import { HomeScreen } from "./components/HomeScreen";
 import { LobbyScreen } from "./components/LobbyScreen";
 import { PlayerBar } from "./components/PlayerBar";
-import { SharedPromptDisplay } from "./components/SharedPromptDisplay";
 import { ReactionLayer } from "./components/ReactionLayer";
 import { ReactionFAB } from "./components/ReactionFAB";
+import { MockPlayerClient } from "./utils/MockPlayer";
 
 type Screen = "home" | "lobby" | "game";
 
@@ -20,6 +20,7 @@ function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [version, setVersion] = useState<string>("loading...");
   const [pendingSolo, setPendingSolo] = useState(false);
+  const [mockClients, setMockClients] = useState<MockPlayerClient[]>([]);
 
   useEffect(() => {
     fetch("/api/version")
@@ -88,17 +89,31 @@ function App() {
     [send]
   );
 
+  const handleAddMockPlayer = useCallback(() => {
+    if (!roomState?.roomCode) return;
+    const botName = `🤖 Bot ${mockClients.length + 1}`;
+    const bot = new MockPlayerClient(botName, roomState.roomCode);
+    bot.connect();
+    setMockClients((prev) => [...prev, bot]);
+  }, [roomState?.roomCode, mockClients.length]);
+
   const handleBackToHome = useCallback(() => {
     setScreen("home");
-  }, []);
+    mockClients.forEach(client => client.disconnect());
+    setMockClients([]);
+  }, [mockClients]);
 
   const phase = roomState?.phase ?? "lobby";
   const players = roomState?.players ?? [];
-  const currentPlayer = roomState?.turn
-    ? players[roomState.turn.currentPlayerIndex]
+  const currentPlayerId = roomState?.turn
+    ? roomState.turn.order[roomState.turn.currentPlayerIndex]
+    : null;
+  const currentPlayer = currentPlayerId
+    ? players.find((p) => p.id === currentPlayerId) ?? null
     : null;
   const isMyTurn = currentPlayer?.id === myPlayerId;
   const isPromptDisabled = phase === "scoring" || phase === "done" || !isMyTurn;
+  const fullPrompt = (roomState?.prompts ?? []).map((p) => p.delta).join("");
 
   return (
     <div data-phase={phase}>
@@ -121,6 +136,7 @@ function App() {
             roomCode={roomState?.roomCode ?? "---"}
             players={players}
             onStartGame={handleStartGame}
+            onAddMockPlayer={handleAddMockPlayer}
             onBack={handleBackToHome}
           />
         )}
@@ -149,8 +165,6 @@ function App() {
               aiImages={roomState?.aiImages ?? []}
             />
 
-            <SharedPromptDisplay prompts={roomState?.prompts ?? []} />
-
             <PlayerBar
               players={players}
               turn={roomState?.turn ?? null}
@@ -160,6 +174,7 @@ function App() {
             <PromptInput
               disabled={isPromptDisabled}
               isMyTurn={isMyTurn}
+              fullPrompt={fullPrompt}
               onSendDelta={handleSendDelta}
             />
 

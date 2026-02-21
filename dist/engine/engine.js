@@ -7,65 +7,43 @@
 //   - turn timer (30s)
 //   - single-flight image generation
 //   - worker IPC
-
-import type { Clock, Disposable } from "../infra/clock.js";
-import type { WorkerClient } from "../infra/workerClient.js";
-import type { RoomState } from "../domain/types.js";
-import type { GameEvent } from "../domain/events.js";
 import { initialRoomState } from "../domain/types.js";
 import { reduce } from "../domain/reducer.js";
 import { randomUUID } from "node:crypto";
-
-export type BroadcastFn = (state: RoomState, event: GameEvent) => void;
-
 export class GameEngine {
-    state: RoomState;
-    events: GameEvent[] = [];
-    private broadcast: BroadcastFn;
-    private clock: Clock;
-    private worker: WorkerClient;
-
+    state;
+    events = [];
+    broadcast;
+    clock;
+    worker;
     // Single-flight tracking
-    inFlightRequestId: string | null = null;
-
+    inFlightRequestId = null;
     // Timers
-    private tickDisposable: Disposable | null = null;
-    private turnTimerDisposable: Disposable | null = null;
-
+    tickDisposable = null;
+    turnTimerDisposable = null;
     // Seq counter (monotonic, engine-level)
-    private seqCounter = 0;
-
-    constructor(
-        roomCode: string,
-        clock: Clock,
-        worker: WorkerClient,
-        broadcast: BroadcastFn,
-    ) {
+    seqCounter = 0;
+    constructor(roomCode, clock, worker, broadcast) {
         this.state = initialRoomState(roomCode);
         this.clock = clock;
         this.worker = worker;
         this.broadcast = broadcast;
     }
-
     // ── Core dispatch ──
-
-    dispatch(event: GameEvent): void {
+    dispatch(event) {
         this.state = reduce(this.state, event);
         this.events.push(event);
         this.broadcast(this.state, event);
     }
-
     // ── Room actions ──
-
-    createRoom(): void {
+    createRoom() {
         this.dispatch({
             type: "ROOM_CREATED",
             timestamp: this.clock.now(),
             roomCode: this.state.roomCode,
         });
     }
-
-    joinRoom(playerId: string, playerName: string): void {
+    joinRoom(playerId, playerName) {
         this.dispatch({
             type: "PLAYER_JOINED",
             timestamp: this.clock.now(),
@@ -73,130 +51,113 @@ export class GameEngine {
             playerName,
         });
     }
-
-    async startGame(): Promise<void> {
-        if (this.state.phase !== "lobby" || this.state.players.length === 0) return;
-
+    async startGame() {
+        if (this.state.phase !== "lobby" || this.state.players.length === 0)
+            return;
         // Fetch topic from worker
         let topicImageUrl = "https://placeholder.test/topic.png";
-        let topicText: string | null = null;
+        let topicText = null;
         try {
             const topic = await this.worker.generateTopic({
                 roomCode: this.state.roomCode,
             });
             topicImageUrl = topic.topicImageUrl;
             topicText = topic.topicText ?? null;
-        } catch (err) {
+        }
+        catch (err) {
             this.dispatch({
                 type: "ERROR",
                 timestamp: this.clock.now(),
                 message: `Topic generation failed: ${err instanceof Error ? err.message : String(err)}`,
             });
         }
-
         this.dispatch({
             type: "GAME_STARTED",
             timestamp: this.clock.now(),
             topicImageUrl,
             topicText,
         });
-
         const turnOrder = this.shuffle([...this.state.players.map((p) => p.id)]);
-
         // Start first turn
         this.startTurn(0, turnOrder);
     }
-
     // ── Turn management ──
-
-    private startTurn(playerIndex: number, order: string[]): void {
+    startTurn(playerIndex, order) {
         this.dispatch({
             type: "TURN_STARTED",
             timestamp: this.clock.now(),
             currentPlayerIndex: playerIndex,
             order,
         });
-
         // Start 10s tick interval
         this.tickDisposable?.dispose();
         this.tickDisposable = this.clock.setInterval(() => {
             this.onTick();
         }, 10_000);
-
         // Start 30s turn timer
         this.turnTimerDisposable?.dispose();
         this.turnTimerDisposable = this.clock.setTimeout(() => {
             this.onTurnTimeout();
         }, 30_000);
     }
-
-    private stopTimers(): void {
+    stopTimers() {
         this.tickDisposable?.dispose();
         this.tickDisposable = null;
         this.turnTimerDisposable?.dispose();
         this.turnTimerDisposable = null;
     }
-
     // ── Tick (10s interval) ──
-
-    private onTick(): void {
+    onTick() {
         this.dispatch({
             type: "TICK_10S",
             timestamp: this.clock.now(),
         });
-
         // Single-flight: skip if in-flight
-        if (this.inFlightRequestId !== null) return;
-
+        if (this.inFlightRequestId !== null)
+            return;
         const prompt = this.getCurrentPrompt();
-        if (!prompt) return;
-
+        if (!prompt)
+            return;
         this.triggerImageGeneration(prompt, false);
     }
-
     // ── Turn timeout (30s) ──
-
-    private onTurnTimeout(): void {
+    onTurnTimeout() {
         this.stopTimers();
-
         const prompt = this.getCurrentPrompt();
         const currentIndex = this.state.turn?.currentPlayerIndex ?? 0;
         const nextIndex = currentIndex + 1;
         const currentOrder = this.state.turn?.order ?? this.state.players.map((p) => p.id);
         const isRoundOver = nextIndex >= currentOrder.length;
-
         this.dispatch({
             type: "TURN_ENDED",
             timestamp: this.clock.now(),
             nextPlayerIndex: isRoundOver ? null : nextIndex,
         });
-
         // Trigger final image generation
         if (prompt) {
             this.triggerImageGeneration(prompt, true).then(() => {
                 if (isRoundOver) {
                     this.onRoundComplete();
-                } else {
+                }
+                else {
                     this.startTurn(nextIndex, currentOrder);
                 }
             });
-        } else {
+        }
+        else {
             if (isRoundOver) {
                 this.onRoundComplete();
-            } else {
+            }
+            else {
                 this.startTurn(nextIndex, currentOrder);
             }
         }
     }
-
     // ── Image generation (single-flight, player→ai sequential) ──
-
-    private async triggerImageGeneration(prompt: string, isFinal: boolean): Promise<void> {
+    async triggerImageGeneration(prompt, isFinal) {
         const seq = ++this.seqCounter;
         const requestId = randomUUID();
-
         this.inFlightRequestId = requestId;
-
         // Player image
         this.dispatch({
             type: "IMAGE_REQUESTED",
@@ -207,7 +168,6 @@ export class GameEngine {
             prompt,
             isFinal,
         });
-
         try {
             const playerResult = await this.worker.generateImage({
                 requestId,
@@ -215,7 +175,6 @@ export class GameEngine {
                 prompt,
                 isFinal,
             });
-
             this.dispatch({
                 type: "IMAGE_READY",
                 timestamp: this.clock.now(),
@@ -225,18 +184,17 @@ export class GameEngine {
                 imageUrl: playerResult.imageUrl,
                 isFinal,
             });
-        } catch (err) {
+        }
+        catch (err) {
             this.dispatch({
                 type: "ERROR",
                 timestamp: this.clock.now(),
                 message: `Player image gen failed: ${err instanceof Error ? err.message : String(err)}`,
             });
         }
-
         // AI image (sequential, same single-flight)
         const aiSeq = ++this.seqCounter;
         const aiRequestId = randomUUID();
-
         this.dispatch({
             type: "IMAGE_REQUESTED",
             timestamp: this.clock.now(),
@@ -246,7 +204,6 @@ export class GameEngine {
             prompt,
             isFinal,
         });
-
         try {
             const aiResult = await this.worker.generateImage({
                 requestId: aiRequestId,
@@ -254,7 +211,6 @@ export class GameEngine {
                 prompt,
                 isFinal,
             });
-
             this.dispatch({
                 type: "IMAGE_READY",
                 timestamp: this.clock.now(),
@@ -264,29 +220,25 @@ export class GameEngine {
                 imageUrl: aiResult.imageUrl,
                 isFinal,
             });
-        } catch (err) {
+        }
+        catch (err) {
             this.dispatch({
                 type: "ERROR",
                 timestamp: this.clock.now(),
                 message: `AI image gen failed: ${err instanceof Error ? err.message : String(err)}`,
             });
         }
-
         this.inFlightRequestId = null;
     }
-
     // ── Round completion ──
-
-    private async onRoundComplete(): Promise<void> {
+    async onRoundComplete() {
         this.dispatch({
             type: "ROUND_COMPLETED",
             timestamp: this.clock.now(),
         });
-
         // Get latest final images for scoring
         const playerImg = this.getLatestFinalImage("player");
         const aiImg = this.getLatestFinalImage("ai");
-
         if (playerImg && aiImg) {
             try {
                 const scoreResult = await this.worker.calculateScore({
@@ -299,14 +251,16 @@ export class GameEngine {
                     cosine: scoreResult.cosine,
                     score100: scoreResult.score100,
                 });
-            } catch (err) {
+            }
+            catch (err) {
                 this.dispatch({
                     type: "ERROR",
                     timestamp: this.clock.now(),
                     message: `Scoring failed: ${err instanceof Error ? err.message : String(err)}`,
                 });
             }
-        } else {
+        }
+        else {
             this.dispatch({
                 type: "ERROR",
                 timestamp: this.clock.now(),
@@ -314,13 +268,13 @@ export class GameEngine {
             });
         }
     }
-
     // ── Prompt management ──
-
-    appendPrompt(playerId: string, delta: string): boolean {
-        if (this.state.phase !== "playing" || !this.state.turn) return false;
+    appendPrompt(playerId, delta) {
+        if (this.state.phase !== "playing" || !this.state.turn)
+            return false;
         const activePlayerId = this.state.turn.order[this.state.turn.currentPlayerIndex];
-        if (!activePlayerId || activePlayerId !== playerId) return false;
+        if (!activePlayerId || activePlayerId !== playerId)
+            return false;
         this.dispatch({
             type: "PROMPT_APPENDED",
             timestamp: this.clock.now(),
@@ -329,29 +283,26 @@ export class GameEngine {
         });
         return true;
     }
-
-    getCurrentPrompt(): string | null {
-        if (this.state.prompts.length === 0) return null;
+    getCurrentPrompt() {
+        if (this.state.prompts.length === 0)
+            return null;
         return this.state.prompts.map((p) => p.delta).join("");
     }
-
     // ── Helpers ──
-
-    private getLatestFinalImage(kind: "player" | "ai") {
+    getLatestFinalImage(kind) {
         const images = kind === "player" ? this.state.playerImages : this.state.aiImages;
         const finals = images.filter((img) => img.isFinal);
         return finals.length > 0 ? finals[finals.length - 1] : null;
     }
-
-    private shuffle<T>(arr: T[]): T[] {
+    shuffle(arr) {
         for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [arr[i], arr[j]] = [arr[j], arr[i]];
         }
         return arr;
     }
-
-    destroy(): void {
+    destroy() {
         this.stopTimers();
     }
 }
+//# sourceMappingURL=engine.js.map

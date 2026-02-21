@@ -1,54 +1,51 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useEffect } from "react";
 
 interface PromptInputProps {
     disabled: boolean;
     isMyTurn: boolean;
+    fullPrompt: string;
     onSendDelta: (delta: string) => void;
 }
 
-const INTERVAL_SEC = 10;
-
-export function PromptInput({ disabled, isMyTurn, onSendDelta }: PromptInputProps) {
-    const [text, setText] = useState("");
-    const [, setCountdown] = useState(INTERVAL_SEC);
-    const textRef = useRef(text);
-    textRef.current = text;
-
-    const flush = useCallback(() => {
-        const delta = textRef.current;
-        if (delta.trim()) {
-            onSendDelta(delta);
-            setText("");
-        }
-        setCountdown(INTERVAL_SEC);
-    }, [onSendDelta]);
+export function PromptInput({ disabled, isMyTurn, fullPrompt, onSendDelta }: PromptInputProps) {
+    const [draft, setDraft] = useState("");
+    const flushDraft = useCallback(() => {
+        if (disabled || !isMyTurn) return;
+        if (!draft.trim()) return;
+        onSendDelta(draft);
+        setDraft("");
+    }, [disabled, isMyTurn, draft, onSendDelta]);
 
     useEffect(() => {
-        const tick = setInterval(() => {
-            setCountdown((prev) => {
-                if (prev <= 1) {
-                    flush();
-                    return INTERVAL_SEC;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(tick);
-    }, [flush]);
+        if (disabled || !isMyTurn || !draft.trim()) return;
+        const t = setTimeout(() => {
+            flushDraft();
+        }, 300);
+        return () => clearTimeout(t);
+    }, [disabled, isMyTurn, draft, flushDraft]);
 
     return (
         <section className={`prompt card ${isMyTurn && !disabled ? "my-turn" : ""}`}>
             <div className="prompt-header">
-                <h2>📝 プロンプト入力（10秒ごと自動送信）</h2>
+                <h2>📝 プロンプト入力（WS同期）</h2>
             </div>
             <textarea
                 id="promptInput"
-                placeholder="ここに追記していくと、10秒ごとにdelta送信されます"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                disabled={disabled}
-                className={isMyTurn && !disabled ? "active-input" : ""}
+                placeholder="ここに全員のプロンプトがリアルタイム同期表示されます"
+                value={fullPrompt}
+                readOnly
+                className="active-input"
             />
+            <div className="join-row">
+                <input
+                    placeholder={isMyTurn ? "追記したいテキストを入力（自動同期）" : "あなたのターンではありません"}
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    disabled={disabled}
+                    className={isMyTurn && !disabled ? "active-input" : ""}
+                />
+            </div>
         </section>
     );
 }

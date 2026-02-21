@@ -2,15 +2,10 @@ import { describe, it, expect } from "vitest";
 import { reduce } from "../domain/reducer.js";
 import { initialRoomState } from "../domain/types.js";
 import { replay } from "../domain/replay.js";
-import type { GameEvent } from "../domain/events.js";
-import type { RoomState } from "../domain/types.js";
-
 // ─── helpers ──
-
 const ts = () => Date.now();
-
-function createAndJoin(roomCode = "123"): { state: RoomState; events: GameEvent[] } {
-    const events: GameEvent[] = [
+function createAndJoin(roomCode = "123") {
+    const events = [
         { type: "ROOM_CREATED", timestamp: ts(), roomCode },
         { type: "PLAYER_JOINED", timestamp: ts(), playerId: "p1", playerName: "Alice" },
         { type: "PLAYER_JOINED", timestamp: ts(), playerId: "p2", playerName: "Bob" },
@@ -18,9 +13,7 @@ function createAndJoin(roomCode = "123"): { state: RoomState; events: GameEvent[
     const state = replay(events);
     return { state, events };
 }
-
 // ─── Test (a): Room create → join ──
-
 describe("reducer", () => {
     it("(a) creates a room and adds players", () => {
         const { state } = createAndJoin();
@@ -32,7 +25,6 @@ describe("reducer", () => {
         expect(state.players[1].joinOrder).toBe(1);
         expect(state.roomCode).toBe("123");
     });
-
     it("rejects duplicate player join", () => {
         const { state } = createAndJoin();
         const next = reduce(state, {
@@ -43,7 +35,6 @@ describe("reducer", () => {
         });
         expect(next.players).toHaveLength(2);
     });
-
     it("rejects joining when room is full (10 players)", () => {
         let state = initialRoomState("999");
         state = reduce(state, { type: "ROOM_CREATED", timestamp: ts(), roomCode: "999" });
@@ -56,7 +47,6 @@ describe("reducer", () => {
             });
         }
         expect(state.players).toHaveLength(10);
-
         // 11th player should be rejected
         state = reduce(state, {
             type: "PLAYER_JOINED",
@@ -66,12 +56,9 @@ describe("reducer", () => {
         });
         expect(state.players).toHaveLength(10);
     });
-
     // ─── Test (e): Stale IMAGE_READY is rejected ──
-
     it("(e) ignores IMAGE_READY with stale seq", () => {
         const { state: lobbyState } = createAndJoin();
-
         // Start game and turn
         let state = reduce(lobbyState, {
             type: "GAME_STARTED",
@@ -85,7 +72,6 @@ describe("reducer", () => {
             currentPlayerIndex: 0,
             order: ["p1", "p2"],
         });
-
         // Process an IMAGE_READY with seq=5
         state = reduce(state, {
             type: "IMAGE_REQUESTED",
@@ -107,7 +93,6 @@ describe("reducer", () => {
         });
         expect(state.lastProcessedSeq).toBe(5);
         expect(state.playerImages).toHaveLength(1);
-
         // Now send a stale IMAGE_READY with seq=3 → should be ignored
         state = reduce(state, {
             type: "IMAGE_READY",
@@ -120,7 +105,6 @@ describe("reducer", () => {
         });
         expect(state.lastProcessedSeq).toBe(5); // unchanged
         expect(state.playerImages).toHaveLength(1); // still 1
-
         // A newer IMAGE_READY with seq=7 → should be accepted
         state = reduce(state, {
             type: "IMAGE_READY",
@@ -134,9 +118,7 @@ describe("reducer", () => {
         expect(state.lastProcessedSeq).toBe(7);
         expect(state.playerImages).toHaveLength(2);
     });
-
     // ─── Prompt append ──
-
     it("appends prompts correctly", () => {
         const { state: lobbyState } = createAndJoin();
         let state = reduce(lobbyState, {
@@ -166,11 +148,9 @@ describe("reducer", () => {
         expect(state.prompts).toHaveLength(2);
         expect(state.prompts.map((p) => p.delta).join("")).toBe("a cute cat on a skateboard");
     });
-
     // ─── Replay ──
-
     it("replay reconstructs state from events", () => {
-        const events: GameEvent[] = [
+        const events = [
             { type: "ROOM_CREATED", timestamp: 1000, roomCode: "456" },
             { type: "PLAYER_JOINED", timestamp: 1001, playerId: "p1", playerName: "Alice" },
             { type: "PLAYER_JOINED", timestamp: 1002, playerId: "p2", playerName: "Bob" },
@@ -188,7 +168,6 @@ describe("reducer", () => {
                 delta: "hello world",
             },
         ];
-
         const state = replay(events);
         expect(state.roomCode).toBe("456");
         expect(state.phase).toBe("playing");
@@ -197,9 +176,7 @@ describe("reducer", () => {
         expect(state.turn?.currentPlayerIndex).toBe(0);
         expect(state.topicText).toBe("dog");
     });
-
     // ─── Error event ──
-
     it("records errors without crashing state", () => {
         const { state: lobbyState } = createAndJoin();
         const state = reduce(lobbyState, {
@@ -212,3 +189,4 @@ describe("reducer", () => {
         expect(state.phase).toBe("lobby"); // unchanged
     });
 });
+//# sourceMappingURL=reducer.test.js.map
