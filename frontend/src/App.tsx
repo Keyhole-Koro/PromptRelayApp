@@ -8,11 +8,15 @@ import { LogPanel } from "./components/LogPanel";
 import { Particles } from "./components/Particles";
 import { HomeScreen } from "./components/HomeScreen";
 import { LobbyScreen } from "./components/LobbyScreen";
+import { PlayerBar } from "./components/PlayerBar";
+import { SharedPromptDisplay } from "./components/SharedPromptDisplay";
+import { ReactionLayer } from "./components/ReactionLayer";
+import { ReactionFAB } from "./components/ReactionFAB";
 
 type Screen = "home" | "lobby" | "game";
 
 function App() {
-  const { roomState, wsStatus, logs, send } = useGameSocket();
+  const { roomState, wsStatus, logs, myPlayerId, lastReaction, send } = useGameSocket();
   const [screen, setScreen] = useState<Screen>("home");
   const [version, setVersion] = useState<string>("loading...");
   const [pendingSolo, setPendingSolo] = useState(false);
@@ -77,6 +81,13 @@ function App() {
     [send]
   );
 
+  const handleSendReaction = useCallback(
+    (emoji: string) => {
+      send({ action: "send_reaction", reaction: emoji });
+    },
+    [send]
+  );
+
   const handleBackToHome = useCallback(() => {
     setScreen("home");
   }, []);
@@ -86,11 +97,16 @@ function App() {
   const currentPlayer = roomState?.turn
     ? players[roomState.turn.currentPlayerIndex]
     : null;
-  const isPromptDisabled = phase === "scoring" || phase === "done";
+  const isMyTurn = currentPlayer?.id === myPlayerId;
+  const isPromptDisabled = phase === "scoring" || phase === "done" || !isMyTurn;
 
   return (
     <div data-phase={phase}>
       <Particles />
+      <ReactionLayer reaction={lastReaction} />
+      {phase === "playing" && (
+        <ReactionFAB onSendReaction={handleSendReaction} />
+      )}
       <div className="page">
         {screen === "home" && (
           <HomeScreen
@@ -133,8 +149,17 @@ function App() {
               aiImages={roomState?.aiImages ?? []}
             />
 
+            <SharedPromptDisplay prompts={roomState?.prompts ?? []} />
+
+            <PlayerBar
+              players={players}
+              turn={roomState?.turn ?? null}
+              myPlayerId={myPlayerId}
+            />
+
             <PromptInput
               disabled={isPromptDisabled}
+              isMyTurn={isMyTurn}
               onSendDelta={handleSendDelta}
             />
 

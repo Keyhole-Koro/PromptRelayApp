@@ -30,7 +30,12 @@ interface UpdatePromptMsg {
     delta: string;
 }
 
-type ClientMessage = CreateRoomMsg | JoinRoomMsg | StartGameMsg | UpdatePromptMsg;
+interface SendReactionMsg {
+    action: "send_reaction";
+    reaction: string;
+}
+
+type ClientMessage = CreateRoomMsg | JoinRoomMsg | StartGameMsg | UpdatePromptMsg | SendReactionMsg;
 
 // ── Server → Client messages ──
 
@@ -49,7 +54,12 @@ interface ErrorMsg {
     message: string;
 }
 
-type ServerMessage = RoomStateMsg | EventMsg | ErrorMsg;
+interface ConnectedMsg {
+    type: "connected";
+    playerId: string;
+}
+
+type ServerMessage = RoomStateMsg | EventMsg | ErrorMsg | ConnectedMsg;
 
 // ── Connection state ──
 
@@ -77,6 +87,8 @@ export function setupWebSocket(server: HttpServer, roomManager: RoomManager): We
             roomCode: null,
             playerId: randomUUID(),
         };
+
+        send(ws, { type: "connected", playerId: conn.playerId });
 
         ws.on("message", (data) => {
             try {
@@ -181,6 +193,25 @@ function handleMessage(
                 return;
             }
             engine.appendPrompt(conn.playerId, msg.delta);
+            break;
+        }
+
+        case "send_reaction": {
+            if (!conn.roomCode) {
+                send(conn.ws, { type: "error", message: "Not in a room" });
+                return;
+            }
+            const engine = roomManager.getRoom(conn.roomCode);
+            if (!engine) {
+                send(conn.ws, { type: "error", message: "Room not found" });
+                return;
+            }
+            // Dispatch as a purely transient event (bypasses state but broadcasts to room)
+            engine.dispatch({
+                type: "REACTION",
+                timestamp: Date.now(),
+                reaction: msg.reaction,
+            });
             break;
         }
 

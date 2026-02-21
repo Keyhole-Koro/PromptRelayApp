@@ -133,6 +133,9 @@ export function reduce(state: RoomState, event: GameEvent): RoomState {
                 errors: [...state.errors, event.message],
             };
 
+        case "REACTION":
+            return state;
+
         default: {
             // Exhaustiveness check
             const _exhaustive: never = event;

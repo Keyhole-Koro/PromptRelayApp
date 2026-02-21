@@ -82,6 +82,12 @@ export interface ErrorEvent {
     message: string;
 }
 
+export interface ReactionEvent {
+    type: "REACTION";
+    timestamp: number;
+    reaction: string;
+}
+
 export type GameEvent =
     | RoomCreatedEvent
     | PlayerJoinedEvent
@@ -94,4 +100,5 @@ export type GameEvent =
     | TurnEndedEvent
     | RoundCompletedEvent
     | ScoredEvent
-    | ErrorEvent;
+    | ErrorEvent
+    | ReactionEvent;

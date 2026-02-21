@@ -26,12 +26,18 @@ export interface ScoreResult {
     score100: number;
 }
 
+export interface PromptEntry {
+    playerId: string;
+    delta: string;
+    timestamp: number;
+}
+
 export interface RoomState {
     roomCode: string;
     phase: Phase;
     players: PlayerInfo[];
     turn: TurnState | null;
-    prompts: { playerId: string; delta: string; timestamp: number }[];
+    prompts: PromptEntry[];
     playerImages: ImageRecord[];
     aiImages: ImageRecord[];
     topicImageUrl: string | null;
@@ -42,5 +48,6 @@ export interface RoomState {
 
 export type IncomingMessage =
     | { type: "room_state"; state: RoomState }
-    | { type: "event"; event: unknown }
-    | { type: "error"; message: string };
+    | { type: "event"; event: { type: string;[key: string]: any } }
+    | { type: "error"; message: string }
+    | { type: "connected"; playerId: string };

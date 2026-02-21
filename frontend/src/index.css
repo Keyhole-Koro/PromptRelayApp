@@ -975,3 +975,113 @@ button:disabled {
     padding: 20px 24px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Reaction FAB
+   ═══════════════════════════════════════════════════════ */
+
+.reaction-fab-container {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  /* Instead of row-reverse, let's keep the natural order (list first, then FAB button)
+     so the list sits to the left of the button. */
+  flex-direction: row;
+}
+
+.reaction-fab-main {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  z-index: 2;
+  box-shadow: 0 8px 24px rgba(56, 182, 255, 0.4);
+}
+
+.reaction-fab-list {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 16px;
+  /* spacing between FAB and the last item */
+
+  /* Hidden state */
+  opacity: 0;
+  pointer-events: none;
+  /* Start shifted inside the button */
+  transform: translateX(-40px);
+  /* Use a spring-like cubic bezier for a smooth unroll effect */
+  transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.reaction-fab-container.open .reaction-fab-list {
+  /* Visible state */
+  opacity: 1;
+  pointer-events: auto;
+  /* Move to normal position */
+  transform: translateX(0);
+}
+
+.fab-reaction-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 24px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-card);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  color: inherit;
+}
+
+.fab-reaction-btn:hover {
+  transform: scale(1.2) translateY(-4px);
+  z-index: 10;
+  border-color: var(--accent);
+}
+
+/* ── Reaction Layer ── */
+.floating-emoji {
+  position: fixed;
+  font-size: 64px;
+  /* Larg emojis */
+  pointer-events: none;
+  z-index: 9999;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+
+@keyframes float-pop-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.3) rotate(-15deg);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateY(-40px) scale(1.2) rotate(10deg);
+  }
+
+  40% {
+    transform: translateY(-90px) scale(1.1) rotate(-10deg);
+  }
+
+  80% {
+    opacity: 0.9;
+    transform: translateY(-200px) scale(1) rotate(5deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-250px) scale(0.9) rotate(0deg);
+  }
+}

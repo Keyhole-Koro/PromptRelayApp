@@ -5,6 +5,8 @@ interface UseGameSocketReturn {
     roomState: RoomState | null;
     wsStatus: "connecting" | "connected" | "disconnected" | "error";
     logs: string[];
+    myPlayerId: string | null;
+    lastReaction: { emoji: string; id: string } | null;
     send: (action: Record<string, unknown>) => void;
 }
 
@@ -16,6 +18,8 @@ export function useGameSocket(): UseGameSocketReturn {
     const [roomState, setRoomState] = useState<RoomState | null>(null);
     const [wsStatus, setWsStatus] = useState<UseGameSocketReturn["wsStatus"]>("connecting");
     const [logs, setLogs] = useState<string[]>([]);
+    const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+    const [lastReaction, setLastReaction] = useState<{ emoji: string; id: string } | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
 
     const addLog = useCallback((msg: string) => {
@@ -50,8 +54,12 @@ export function useGameSocket(): UseGameSocketReturn {
                     const msg = JSON.parse(String(evt.data)) as IncomingMessage;
                     if (msg.type === "room_state") {
                         setRoomState(msg.state);
+                    } else if (msg.type === "connected") {
+                        setMyPlayerId(msg.playerId);
                     } else if (msg.type === "error") {
                         addLog(`error: ${msg.message}`);
+                    } else if (msg.type === "event" && msg.event.type === "REACTION") {
+                        setLastReaction({ emoji: msg.event.reaction, id: Math.random().toString(36).substr(2, 9) });
                     } else {
                         addLog("event received");
                     }
@@ -83,5 +91,5 @@ export function useGameSocket(): UseGameSocketReturn {
         };
     }, [addLog]);
 
-    return { roomState, wsStatus, logs, send };
+    return { roomState, wsStatus, logs, myPlayerId, lastReaction, send };
 }
