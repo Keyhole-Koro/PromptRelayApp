@@ -1,7 +1,7 @@
 // ─── Server Entry Point ─────────────────────────────────────────
 
 import { createServer } from "node:http";
-import { handleApiRequest } from "./api.js";
+import { handleApiRequest, handlePoolFileRequest } from "./api.js";
 import { setupWebSocket } from "./ws.js";
 import { RoomManager } from "../engine/roomManager.js";
 import { RealClock } from "../infra/clock.js";
@@ -17,6 +17,8 @@ const roomManager = new RoomManager(clock, worker);
 const server = createServer((req, res) => {
     // Try API routes first
     if (handleApiRequest(req, res)) return;
+    // Serve pool image files
+    if (handlePoolFileRequest(req, res)) return;
 
     // 404 for everything else
     res.writeHead(404, { "Content-Type": "application/json" });

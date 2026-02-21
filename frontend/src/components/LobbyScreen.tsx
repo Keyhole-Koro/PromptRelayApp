@@ -4,6 +4,7 @@ interface LobbyScreenProps {
     roomCode: string;
     players: PlayerInfo[];
     myPlayerId: string | null;
+    isStartingGame: boolean;
     onStartGame: () => void;
     onAddMockPlayer: () => void;
     onBack: () => void;
@@ -13,6 +14,7 @@ export function LobbyScreen({
     roomCode,
     players,
     myPlayerId,
+    isStartingGame,
     onStartGame,
     onAddMockPlayer,
     onBack,
@@ -20,6 +22,7 @@ export function LobbyScreen({
     const hostPlayerId = players[0]?.id ?? null;
     const isHost = !!myPlayerId && myPlayerId === hostPlayerId;
     const canStart = isHost && players.length >= 2;
+    const startDisabled = !canStart || isStartingGame;
 
     return (
         <div className="lobby-screen">
@@ -69,21 +72,25 @@ export function LobbyScreen({
             </div>
 
             <button
-                className="start-btn lobby-start-btn"
+                className={`start-btn lobby-start-btn ${isStartingGame ? "is-starting" : ""}`.trim()}
                 onClick={onStartGame}
-                disabled={!canStart}
+                disabled={startDisabled}
                 title={
-                    !isHost
+                    isStartingGame
+                        ? "ゲーム開始準備中です"
+                        : !isHost
                         ? "ホストのみ開始できます"
                         : players.length < 2
                             ? "2人以上で開始できます"
                             : undefined
                 }
             >
-                ▶ ゲーム開始
+                {isStartingGame ? "少々お待ちください…" : "▶ ゲーム開始"}
             </button>
             <p className="meta" style={{ textAlign: "center", marginTop: 8 }}>
-                {!isHost
+                {isStartingGame
+                    ? "ゲームを開始しています。少々お待ちください"
+                    : !isHost
                     ? "ホストのみゲーム開始できます"
                     : players.length < 2
                         ? "ゲーム開始には2人以上必要です"

@@ -26,12 +26,9 @@ export interface ImageRecord {
 export interface ScoreResult {
     cosine: number;
     score100: number;
-    breakdown?: {
-        semantic: number;
-        composition: number;
-        color: number;
-        detail: number;
-    };
+    playerScore100: number;
+    aiScore100: number;
+    winner: "player" | "ai" | "draw";
 }
 
 export interface PromptEntry {

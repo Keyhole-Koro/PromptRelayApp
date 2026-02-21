@@ -20,6 +20,7 @@ function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [version, setVersion] = useState<string>("loading...");
   const [pendingSolo, setPendingSolo] = useState(false);
+  const [isStartingGame, setIsStartingGame] = useState(false);
   const [mockClients, setMockClients] = useState<MockPlayerClient[]>([]);
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [isFirstTurnCountdown, setIsFirstTurnCountdown] = useState(false);
@@ -43,6 +44,7 @@ function App() {
     if (roomState?.phase === "playing" || roomState?.phase === "selecting" || roomState?.phase === "scoring" || roomState?.phase === "done") {
       setScreen("game");
       setPendingSolo(false);
+      setIsStartingGame(false);
     }
   }, [roomState?.phase]);
 
@@ -79,6 +81,7 @@ function App() {
   );
 
   const handleStartGame = useCallback(() => {
+    setIsStartingGame(true);
     send({ action: "start_game" });
   }, [send]);
 
@@ -113,6 +116,7 @@ function App() {
 
   const handleBackToHome = useCallback(() => {
     setScreen("home");
+    setIsStartingGame(false);
     mockClients.forEach(client => client.disconnect());
     setMockClients([]);
   }, [mockClients]);
@@ -157,6 +161,7 @@ function App() {
             roomCode={roomState?.roomCode ?? "---"}
             players={players}
             myPlayerId={myPlayerId}
+            isStartingGame={isStartingGame}
             onStartGame={handleStartGame}
             onAddMockPlayer={handleAddMockPlayer}
             onBack={handleBackToHome}

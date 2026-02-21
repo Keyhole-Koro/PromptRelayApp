@@ -14,6 +14,7 @@ import type { RoomState } from "../domain/types.js";
 import type { GameEvent } from "../domain/events.js";
 import { initialRoomState } from "../domain/types.js";
 import { reduce } from "../domain/reducer.js";
+import { pickTopicFromPool, markTopicUsed } from "../infra/topicPool.js";
 import { randomUUID } from "node:crypto";
 
 export type BroadcastFn = (state: RoomState, event: GameEvent) => void;
@@ -77,20 +78,18 @@ export class GameEngine {
     async startGame(): Promise<void> {
         if (this.state.phase !== "lobby" || this.state.players.length === 0) return;
 
-        // Fetch topic from worker
+        // Fetch topic from local pool instead of worker
         let topicImageUrl = "https://placeholder.test/topic.png";
         let topicText: string | null = null;
         try {
-            const topic = await this.worker.generateTopic({
-                roomCode: this.state.roomCode,
-            });
-            topicImageUrl = topic.topicImageUrl;
-            topicText = topic.topicText ?? null;
+            const topic = await pickTopicFromPool();
+            topicImageUrl = `/api/pool/${topic.servePath}/${topic.imageFile}`;
+            topicText = topic.prompt;
         } catch (err) {
             this.dispatch({
                 type: "ERROR",
                 timestamp: this.clock.now(),
-                message: `Topic generation failed: ${err instanceof Error ? err.message : String(err)}`,
+                message: `Topic pool failed: ${err instanceof Error ? err.message : String(err)}`,
             });
         }
 
@@ -98,7 +97,7 @@ export class GameEngine {
             type: "GAME_STARTED",
             timestamp: this.clock.now(),
             topicImageUrl,
-            topicText,
+            topicText: null, // Never reveal the topic prompt to players
         });
 
         const turnOrder = this.shuffle([...this.state.players.map((p) => p.id)]);
@@ -347,7 +346,11 @@ export class GameEngine {
         });
 
         try {
+            if (!this.state.topicImageUrl) {
+                throw new Error("Topic image is missing");
+            }
             const scoreResult = await this.worker.calculateScore({
+                topicImageUrl: this.state.topicImageUrl,
                 playerImageUrl: playerImg.url,
                 aiImageUrl: aiImg.url,
             });
@@ -356,6 +359,9 @@ export class GameEngine {
                 timestamp: this.clock.now(),
                 cosine: scoreResult.cosine,
                 score100: scoreResult.score100,
+                playerScore100: scoreResult.playerScore100,
+                aiScore100: scoreResult.aiScore100,
+                winner: scoreResult.winner,
             });
         } catch (err) {
             this.dispatch({

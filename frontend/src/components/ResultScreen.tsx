@@ -24,13 +24,14 @@ function getScoreLabel(score: number): string {
 export function ResultScreen({ roomState, onBackToHome }: ResultScreenProps) {
     if (!roomState) return null;
 
-    const { topicImageUrl, topicText, aiImages, prompts, score, players, selectedImageSeq } = roomState;
+    const { topicImageUrl, topicText, aiImages, prompts, score, players, selectedImageSeq, phase } = roomState;
     const finalImage = selectedImageSeq
         ? aiImages.find(img => img.seq === selectedImageSeq && img.isFinal) ?? aiImages.find(img => img.seq === selectedImageSeq)
         : (aiImages.length > 0 ? aiImages[aiImages.length - 1] : null);
     const scoreVal = score?.score100 ?? 0;
     const cosineVal = score?.cosine ?? 0;
-    const breakdown = score?.breakdown;
+    const winnerLabel = score?.winner === "player" ? "プレイヤー" : score?.winner === "ai" ? "AI" : "引き分け";
+    const isJudging = phase === "scoring" && !score;
 
     return (
         <div className="result-overlay">
@@ -41,6 +42,14 @@ export function ResultScreen({ roomState, onBackToHome }: ResultScreenProps) {
                     <p className="result-subtitle">全ターン完了！みんなの協力の成果は…？</p>
                 </div>
 
+                {isJudging && (
+                    <div className="result-score-hero">
+                        <div className="score-numbers">
+                            <div className="score-main">再現度を計測中...</div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Score Hero */}
                 {score && (
                     <div className="result-score-hero">
@@ -50,29 +59,9 @@ export function ResultScreen({ roomState, onBackToHome }: ResultScreenProps) {
                         <div className="score-numbers">
                             <div className="score-main">{Math.round(scoreVal)}<span className="score-unit">/ 100</span></div>
                             <div className="score-cosine">cosine: {cosineVal.toFixed(4)}</div>
+                            <div className="score-cosine">プレイヤー: {Math.round(score.playerScore100)} / AI: {Math.round(score.aiScore100)}</div>
+                            <div className="score-cosine">勝者は... {winnerLabel}</div>
                         </div>
-                    </div>
-                )}
-
-                {breakdown && (
-                    <div className="result-breakdown card">
-                        <h3>Score Breakdown</h3>
-                        {[
-                            { key: "semantic", label: "Semantic", value: breakdown.semantic },
-                            { key: "composition", label: "Composition", value: breakdown.composition },
-                            { key: "color", label: "Color", value: breakdown.color },
-                            { key: "detail", label: "Detail", value: breakdown.detail },
-                        ].map((item) => (
-                            <div key={item.key} className="breakdown-row">
-                                <div className="breakdown-head">
-                                    <span>{item.label}</span>
-                                    <span>{Math.round(item.value * 100)}</span>
-                                </div>
-                                <div className="breakdown-bar">
-                                    <div className="breakdown-fill" style={{ width: `${Math.max(0, Math.min(100, item.value * 100))}%` }} />
-                                </div>
-                            </div>
-                        ))}
                     </div>
                 )}
 

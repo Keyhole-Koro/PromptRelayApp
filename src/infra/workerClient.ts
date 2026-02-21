@@ -26,12 +26,16 @@ export interface ImageGenerateResponse {
 }
 
 export interface ScoreRequest {
+    topicImageUrl: string;
     playerImageUrl: string;
     aiImageUrl: string;
 }
 export interface ScoreResponse {
     cosine: number;
     score100: number;
+    playerScore100: number;
+    aiScore100: number;
+    winner: "player" | "ai" | "draw";
 }
 
 export interface WorkerClient {
@@ -43,6 +47,14 @@ export interface WorkerClient {
 // ─── HTTP Worker Client (production) ────────────────────────────
 
 const WORKER_BASE = "http://127.0.0.1:8091";
+const APP_BASE = "http://127.0.0.1:8080";
+
+function normalizeImageUrlForJudge(url: string): string {
+    if (/^https?:\/\//i.test(url)) return url;
+    if (url.startsWith("/files/")) return `${WORKER_BASE}${url}`;
+    if (url.startsWith("/")) return `${APP_BASE}${url}`;
+    return url;
+}
 
 export class HttpWorkerClient implements WorkerClient {
     async generateTopic(req: TopicGenerateRequest): Promise<TopicGenerateResponse> {
@@ -70,13 +82,29 @@ export class HttpWorkerClient implements WorkerClient {
     }
 
     async calculateScore(req: ScoreRequest): Promise<ScoreResponse> {
-        const res = await fetch(`${WORKER_BASE}/v1/score`, {
+        const judgeReq = {
+            topicImageUrl: normalizeImageUrlForJudge(req.topicImageUrl),
+            playerImageUrl: normalizeImageUrlForJudge(req.playerImageUrl),
+            aiImageUrl: normalizeImageUrlForJudge(req.aiImageUrl),
+        };
+        const res = await fetch(`${WORKER_BASE}/judge`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(req),
+            body: JSON.stringify(judgeReq),
         });
         if (!res.ok) throw new Error(`Worker score failed: ${res.status}`);
-        return (await res.json()) as ScoreResponse;
+        const data = (await res.json()) as {
+            player: { cosine: number; score100: number };
+            ai: { cosine: number; score100: number };
+            winner: "player" | "ai" | "draw";
+        };
+        return {
+            cosine: data.player.cosine,
+            score100: data.player.score100,
+            playerScore100: data.player.score100,
+            aiScore100: data.ai.score100,
+            winner: data.winner,
+        };
     }
 }
 
@@ -102,6 +130,9 @@ export class FakeWorkerClient implements WorkerClient {
     scoreResponse: ScoreResponse = {
         cosine: 0.85,
         score100: 85,
+        playerScore100: 85,
+        aiScore100: 80,
+        winner: "player",
     };
 
     shouldFail = false;

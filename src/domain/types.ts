@@ -26,6 +26,9 @@ export interface ImageRecord {
 export interface ScoreResult {
     cosine: number;
     score100: number;
+    playerScore100: number;
+    aiScore100: number;
+    winner: "player" | "ai" | "draw";
 }
 
 export interface TurnState {

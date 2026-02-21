@@ -4,7 +4,7 @@ interface ReactionFABProps {
     onSendReaction: (emoji: string) => void;
 }
 
-const REACTIONS = ["😂", "🤯", "😮", "👏", "🔥", "✨", "👍", "❤️"];
+const REACTIONS = ["😂", "🤯", "😮", "👏", "🔥", "✨", "👍", "❤️", "🚀"];
 
 export function ReactionFAB({ onSendReaction }: ReactionFABProps) {
     const [isOpen, setIsOpen] = useState(false);

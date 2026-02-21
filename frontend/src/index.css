@@ -925,6 +925,12 @@ button:disabled {
   text-align: center;
 }
 
+.join-row .start-btn {
+  flex: 0 0 auto;
+  min-width: 120px;
+  white-space: nowrap;
+}
+
 .start-btn {
   width: 100%;
   padding: 14px 24px;
@@ -1067,6 +1073,11 @@ button:disabled {
   font-size: 18px;
 }
 
+.lobby-start-btn.is-starting:disabled {
+  opacity: 1;
+  cursor: progress;
+}
+
 /* ── Game info bar ────────────────────────────────────── */
 .game-info-bar {
   background: var(--bg-card);
@@ -1181,6 +1192,11 @@ button:disabled {
   pointer-events: none;
   z-index: 9999;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+  animation: float-pop-up 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.floating-emoji.rocket-emoji {
+  animation: rocket-to-top-right 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 @keyframes float-pop-up {
@@ -1206,6 +1222,28 @@ button:disabled {
   100% {
     opacity: 0;
     transform: translateY(-250px) scale(0.9) rotate(0deg);
+  }
+}
+
+@keyframes rocket-to-top-right {
+  0% {
+    opacity: 0;
+    transform: translate(0, 18px) scale(0.45) rotate(-25deg);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translate(24px, -24px) scale(1.1) rotate(-10deg);
+  }
+
+  45% {
+    opacity: 1;
+    transform: translate(140px, -120px) scale(1.05) rotate(-4deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(360px, -340px) scale(0.95) rotate(0deg);
   }
 }
 

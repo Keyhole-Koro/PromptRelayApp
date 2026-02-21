@@ -133,7 +133,13 @@ export function reduce(state: RoomState, event: GameEvent): RoomState {
             return {
                 ...state,
                 phase: "done",
-                score: { cosine: event.cosine, score100: event.score100 },
+                score: {
+                    cosine: event.cosine,
+                    score100: event.score100,
+                    playerScore100: event.playerScore100,
+                    aiScore100: event.aiScore100,
+                    winner: event.winner,
+                },
             };
 
         case "ERROR":

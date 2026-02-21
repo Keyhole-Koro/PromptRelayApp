@@ -12,17 +12,26 @@ export function PromptInput({ disabled, isMyTurn, fullPrompt, onSendDelta }: Pro
     const [draft, setDraft] = useState("");
     const flushDraft = useCallback(() => {
         if (disabled || !isMyTurn) return;
-        if (!draft.trim()) return;
+        if (draft.length === 0) return;
         onSendDelta(draft);
         setDraft("");
     }, [disabled, isMyTurn, draft, onSendDelta]);
 
     useEffect(() => {
         if (!disabled && isMyTurn) return;
-        if (!draft.trim()) return;
+        if (draft.length === 0) return;
         onSendDelta(draft);
         setDraft("");
     }, [disabled, isMyTurn, draft, onSendDelta]);
+
+    useEffect(() => {
+        if (disabled || !isMyTurn) return;
+        if (draft.length === 0) return;
+        const t = setInterval(() => {
+            flushDraft();
+        }, 250);
+        return () => clearInterval(t);
+    }, [disabled, isMyTurn, draft, flushDraft]);
 
     return (
         <section className={`prompt card ${isMyTurn && !disabled ? "my-turn" : ""}`}>

@@ -45,12 +45,10 @@ export function ReactionLayer({ reaction }: ReactionProps) {
             {emojis.map(e => (
                 <div
                     key={e.id}
-                    className="floating-emoji"
+                    className={`floating-emoji ${e.emoji === "🚀" ? "rocket-emoji" : ""}`.trim()}
                     style={{
                         left: `${e.left}px`,
                         bottom: `${e.bottom}px`,
-                        // add slight random horizontal drift
-                        animation: `float-pop-up 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards`
                     }}
                 >
                     {e.emoji}
