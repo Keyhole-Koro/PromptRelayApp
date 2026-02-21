@@ -1,0 +1,24 @@
+{
+  "name": "prompt-relay",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server/index.ts",
+    "build:web": "esbuild web/main.ts --bundle --format=esm --sourcemap --outfile=public/main.js",
+    "dev:proxy": "caddy run --config /etc/caddy/caddyfile",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/ws": "^8.5.10",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}
