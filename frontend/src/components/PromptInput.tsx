@@ -10,12 +10,15 @@ interface PromptInputProps {
 
 export function PromptInput({ disabled, isMyTurn, fullPrompt, onSendDelta }: PromptInputProps) {
     const [draft, setDraft] = useState("");
+    const [isComposing, setIsComposing] = useState(false);
+
     const flushDraft = useCallback(() => {
         if (disabled || !isMyTurn) return;
+        if (isComposing) return;
         if (draft.length === 0) return;
         onSendDelta(draft);
         setDraft("");
-    }, [disabled, isMyTurn, draft, onSendDelta]);
+    }, [disabled, isMyTurn, isComposing, draft, onSendDelta]);
 
     useEffect(() => {
         if (!disabled && isMyTurn) return;
@@ -26,12 +29,13 @@ export function PromptInput({ disabled, isMyTurn, fullPrompt, onSendDelta }: Pro
 
     useEffect(() => {
         if (disabled || !isMyTurn) return;
+        if (isComposing) return;
         if (draft.length === 0) return;
-        const t = setInterval(() => {
+        const t = setTimeout(() => {
             flushDraft();
-        }, 250);
-        return () => clearInterval(t);
-    }, [disabled, isMyTurn, draft, flushDraft]);
+        }, 900);
+        return () => clearTimeout(t);
+    }, [disabled, isMyTurn, isComposing, draft, flushDraft]);
 
     return (
         <section className={`prompt card ${isMyTurn && !disabled ? "my-turn" : ""}`}>
@@ -45,13 +49,24 @@ export function PromptInput({ disabled, isMyTurn, fullPrompt, onSendDelta }: Pro
                 onChange={(e) => {
                     if (disabled || !isMyTurn) return;
                     const val = e.target.value;
-                    // Allow appending to the existing prompt
-                    if (val.startsWith(fullPrompt)) {
-                        setDraft(val.substring(fullPrompt.length));
-                    } else if (fullPrompt.startsWith(val)) {
-                        // Handled deleting into the immutable part by resetting draft
+                    // Keep the committed shared part immutable, and treat anything after it as local draft.
+                    if (val.length <= fullPrompt.length) {
                         setDraft("");
+                        return;
                     }
+                    setDraft(val.slice(fullPrompt.length));
+                }}
+                onCompositionStart={() => {
+                    setIsComposing(true);
+                }}
+                onCompositionEnd={(e) => {
+                    setIsComposing(false);
+                    const val = e.currentTarget.value;
+                    if (val.length <= fullPrompt.length) {
+                        setDraft("");
+                        return;
+                    }
+                    setDraft(val.slice(fullPrompt.length));
                 }}
                 onBlur={flushDraft}
                 readOnly={disabled || !isMyTurn}

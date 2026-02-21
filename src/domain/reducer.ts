@@ -44,7 +44,7 @@ export function reduce(state: RoomState, event: GameEvent): RoomState {
                 turn: {
                     currentPlayerIndex: event.currentPlayerIndex,
                     startedAt: event.timestamp,
-                    durationMs: 30_000,
+                    durationMs: event.durationMs,
                     order: [...event.order],
                     seq: state.turn?.seq ?? 0,
                 },
@@ -108,15 +108,9 @@ export function reduce(state: RoomState, event: GameEvent): RoomState {
                 // Round is about to complete
                 return { ...state, turn: null };
             }
-            return {
-                ...state,
-                turn: state.turn
-                    ? {
-                        ...state.turn,
-                        currentPlayerIndex: event.nextPlayerIndex,
-                    }
-                    : null,
-            };
+            // Don't advance currentPlayerIndex here — TURN_STARTED will set it
+            // This prevents the TurnCountdown from double-firing
+            return state;
         }
 
         case "ROUND_COMPLETED":

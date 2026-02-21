@@ -31,7 +31,7 @@ export function HomeScreen({ onSoloPlay, onCreateRoom, onJoinRoom }: HomeScreenP
                     >
                         <span className="mode-icon">🎯</span>
                         <span className="mode-label">一人でプレイ</span>
-                        <span className="mode-desc">練習モード – ソロで挑戦</span>
+                        <span className="mode-desc">ソロで挑戦</span>
                     </button>
                     <button
                         className="mode-card"

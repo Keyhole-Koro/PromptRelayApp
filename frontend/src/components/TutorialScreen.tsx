@@ -11,10 +11,10 @@ const TUTORIAL_STEPS = [
         mockContent: (
             <div className="tutorial-mock">
                 <div className="tutorial-mock-img-placeholder">
-                    <span>🖼️ お題画像</span>
+                    <img src="/lion.png" alt="ライオンのお題画像" className="tutorial-mock-image" />
                 </div>
                 <div className="tutorial-mock-input">
-                    A beautiful sunset...
+                    ライオン
                 </div>
             </div>
         )
@@ -24,11 +24,11 @@ const TUTORIAL_STEPS = [
         desc: "あなたの入力したプロンプトが前の結果に追加され、新しい画像が作られます。\n次の人はそれを見て、さらに連想を膨らませます！",
         mockContent: (
             <div className="tutorial-mock">
-                <div className="tutorial-mock-input">
-                    A beautiful sunset <span style={{ color: "var(--neon-pink)" }}>, over the ocean</span>...
-                </div>
                 <div className="tutorial-mock-img-placeholder" style={{ borderColor: "var(--neon-pink)" }}>
-                    <span>🌊 海の夕焼け画像</span>
+                    <img src="/lionwing.png" alt="翼の生えたライオン画像" className="tutorial-mock-image" />
+                </div>
+                <div className="tutorial-mock-input">
+                    ライオン　<span style={{ color: "var(--neon-pink)" }}>翼が生えてる</span>
                 </div>
             </div>
         )

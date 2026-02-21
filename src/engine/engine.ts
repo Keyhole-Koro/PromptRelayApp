@@ -108,13 +108,23 @@ export class GameEngine {
 
     // ── Turn management ──
 
+    private getTurnDurationMs(): number {
+        const count = this.state.players.length;
+        if (count <= 1) return 90_000;
+        if (count === 2) return 70_000;
+        if (count === 3) return 50_000;
+        return 30_000; // 4+
+    }
+
     private startTurn(playerIndex: number, order: string[], delayMs: number = 0): void {
         const startedAt = this.clock.now() + delayMs;
+        const turnDuration = this.getTurnDurationMs();
         this.dispatch({
             type: "TURN_STARTED",
             timestamp: startedAt,
             currentPlayerIndex: playerIndex,
             order,
+            durationMs: turnDuration,
         });
 
         // Start 10s tick interval (relative to real start time)
@@ -144,11 +154,11 @@ export class GameEngine {
             }, 10_000);
         }
 
-        // Start 30s turn timer (+ delayMs wait)
+        // Turn timer (dynamic duration + delayMs wait)
         this.turnTimerDisposable?.dispose();
         this.turnTimerDisposable = this.clock.setTimeout(() => {
             this.onTurnTimeout();
-        }, 30_000 + delayMs);
+        }, turnDuration + delayMs);
     }
 
     private stopTimers(): void {
@@ -193,20 +203,17 @@ export class GameEngine {
         });
 
         // Trigger final image generation
-        if (prompt) {
+        if (prompt && !isRoundOver) {
             this.triggerImageGeneration(prompt, true).then(() => {
-                if (isRoundOver) {
-                    this.clock.setTimeout(() => this.onRoundComplete(), 3000);
-                } else {
-                    this.startTurn(nextIndex, currentOrder);
-                }
-            });
-        } else {
-            if (isRoundOver) {
-                this.clock.setTimeout(() => this.onRoundComplete(), 3000);
-            } else {
                 this.startTurn(nextIndex, currentOrder);
-            }
+            });
+        } else if (!isRoundOver) {
+            this.startTurn(nextIndex, currentOrder);
+        }
+
+        // If round is over, go to scoring immediately (don't wait for image gen)
+        if (isRoundOver) {
+            this.onRoundComplete();
         }
     }
 
@@ -268,15 +275,13 @@ export class GameEngine {
         });
 
         try {
-            // Get the most recent player image URL for the AI to reference
-            const latestPlayerImage = this.state.playerImages[this.state.playerImages.length - 1];
+            // AI references only the topic image to create its own prompt
             const themeImageUrl = this.state.topicImageUrl ?? "";
-            const recentImageUrl = latestPlayerImage?.url ?? themeImageUrl;
 
             const aiResult = await this.worker.generateAiImage({
                 requestId: aiRequestId,
                 themeImageUrl,
-                recentImageUrl,
+                recentImageUrl: themeImageUrl,
                 recentPrompt: prompt,
             });
 
@@ -304,58 +309,37 @@ export class GameEngine {
     // ── Round completion ──
 
     private async onRoundComplete(): Promise<void> {
+        // Use the latest player and AI images for judging
+        const latestPlayerImg = this.state.playerImages[this.state.playerImages.length - 1];
+        const latestAiImg = this.state.aiImages[this.state.aiImages.length - 1];
+
         this.dispatch({
             type: "ROUND_COMPLETED",
             timestamp: this.clock.now(),
         });
 
-        // Just enter the "selecting" phase
-        // The frontend will now call selectImage(playerId, seq)
-    }
-
-    async selectImage(playerId: string, seq: number): Promise<void> {
-        if (this.state.phase !== "selecting") return;
-
-        // Find the selected player image
-        const playerImg = this.state.playerImages.find((img) => img.seq === seq);
-        if (!playerImg) {
-            this.dispatch({
-                type: "ERROR",
-                timestamp: this.clock.now(),
-                message: `Selected image seq ${seq} not found`,
-            });
-            return;
-        }
-
-        // Find the AI image generated with the *exact same* prompt
-        // Note: we want the final AI image for that prompt if it exists, otherwise just match by prompt
-        const aiImg = this.state.aiImages.find((img) => img.prompt === playerImg.prompt && img.isFinal)
-            ?? this.state.aiImages.find((img) => img.prompt === playerImg.prompt);
-
-        if (!aiImg) {
-            this.dispatch({
-                type: "ERROR",
-                timestamp: this.clock.now(),
-                message: `Could not find a matching AI image for the selected image's prompt`,
-            });
-            return;
-        }
-
+        // Immediately transition to scoring and call /judge
         this.dispatch({
             type: "IMAGE_SELECTED",
             timestamp: this.clock.now(),
-            playerId,
-            selectedSeq: seq,
+            playerId: "",
+            selectedSeq: latestPlayerImg?.seq ?? 0,
         });
 
+        if (!this.state.topicImageUrl || !latestPlayerImg || !latestAiImg) {
+            this.dispatch({
+                type: "ERROR",
+                timestamp: this.clock.now(),
+                message: "Missing images for scoring",
+            });
+            return;
+        }
+
         try {
-            if (!this.state.topicImageUrl) {
-                throw new Error("Topic image is missing");
-            }
             const scoreResult = await this.worker.calculateScore({
                 topicImageUrl: this.state.topicImageUrl,
-                playerImageUrl: playerImg.url,
-                aiImageUrl: aiImg.url,
+                playerImageUrl: latestPlayerImg.url,
+                aiImageUrl: latestAiImg.url,
             });
             this.dispatch({
                 type: "SCORED",
@@ -373,6 +357,11 @@ export class GameEngine {
                 message: `Scoring failed: ${err instanceof Error ? err.message : String(err)}`,
             });
         }
+    }
+
+    async selectImage(_playerId: string, _seq: number): Promise<void> {
+        // Scoring is now handled automatically by onRoundComplete
+        // This method is kept for API compatibility
     }
 
     // ── Prompt management ──

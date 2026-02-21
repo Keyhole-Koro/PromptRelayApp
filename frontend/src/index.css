@@ -2037,6 +2037,67 @@ button:disabled {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Scoring Loading Overlay
+   ═══════════════════════════════════════════════════════ */
+
+.scoring-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 0.3s ease both;
+}
+
+.scoring-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.scoring-spinner {
+  width: 56px;
+  height: 56px;
+  border: 4px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--neon-cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scoring-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-shadow: 0 0 16px rgba(0, 212, 200, 0.5);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
    Tutorial Screen
    ═══════════════════════════════════════════════════════ */
 
@@ -2088,9 +2149,9 @@ button:disabled {
 .tutorial-title {
   font-family: var(--font-heading);
   font-size: 24px;
-  color: var(--neon-cyan);
+  color: var(--text-light);
   margin-bottom: 24px;
-  text-shadow: 0 0 10px rgba(0, 212, 200, 0.5);
+  text-shadow: none;
 }
 
 .tutorial-content-wrap {
@@ -2127,7 +2188,9 @@ button:disabled {
 }
 
 .tutorial-mock-img-placeholder {
-  height: 140px;
+  width: min(100%, 220px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
   background: var(--bg-card);
   border: 2px dashed var(--border);
   border-radius: var(--radius-md);
@@ -2138,6 +2201,14 @@ button:disabled {
   font-weight: bold;
 }
 
+.tutorial-mock-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: calc(var(--radius-md) - 2px);
+  display: block;
+}
+
 .tutorial-mock-input {
   background: var(--bg-hover);
   padding: 12px;
@@ -2145,6 +2216,7 @@ button:disabled {
   color: var(--text-light);
   font-family: monospace;
   font-size: 14px;
+  text-align: center;
 }
 
 .tutorial-mock-img-small {

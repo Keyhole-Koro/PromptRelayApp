@@ -25,6 +25,7 @@ export interface TurnStartedEvent {
     timestamp: number;
     currentPlayerIndex: number;
     order: string[];
+    durationMs: number;
 }
 
 export interface Tick10sEvent {

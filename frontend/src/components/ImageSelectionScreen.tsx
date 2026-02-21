@@ -7,12 +7,12 @@ interface ImageSelectionScreenProps {
 }
 
 export function ImageSelectionScreen({ images, onSelectImage }: ImageSelectionScreenProps) {
-    const finalImages = images.filter((img) => img.isFinal);
+    const allImages = images;
     const [selectedSeq, setSelectedSeq] = useState<number | null>(
-        finalImages.length > 0 ? finalImages[finalImages.length - 1].seq : null
+        allImages.length > 0 ? allImages[allImages.length - 1].seq : null
     );
 
-    if (finalImages.length === 0) {
+    if (allImages.length === 0) {
         return (
             <div className="selection-screen">
                 <h2>画像選択</h2>
@@ -26,7 +26,7 @@ export function ImageSelectionScreen({ images, onSelectImage }: ImageSelectionSc
             <h2 className="selection-title">どの画像を評価しますか？</h2>
 
             <div className="selection-carousel">
-                {finalImages.map((img) => {
+                {allImages.map((img) => {
                     const isSelected = img.seq === selectedSeq;
                     return (
                         <div

@@ -197,7 +197,16 @@ function App() {
               />
             </div>
 
-            {(phase === "scoring" || phase === "done") && (
+            {phase === "scoring" && (
+              <div className="scoring-overlay">
+                <div className="scoring-modal">
+                  <div className="scoring-spinner" />
+                  <p className="scoring-text">類似度を計算中...</p>
+                </div>
+              </div>
+            )}
+
+            {phase === "done" && (
               <ResultScreen
                 roomState={roomState}
                 onBackToHome={handleBackToHome}
