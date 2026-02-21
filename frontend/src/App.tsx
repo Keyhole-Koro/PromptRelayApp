@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { useGameSocket } from "./hooks/useGameSocket";
-import { TopBar } from "./components/TopBar";
 import { GameBoard } from "./components/GameBoard";
 import { PromptInput } from "./components/PromptInput";
 import { Particles } from "./components/Particles";
@@ -17,7 +16,7 @@ import { ImageSelectionScreen } from "./components/ImageSelectionScreen";
 type Screen = "home" | "lobby" | "game";
 
 function App() {
-  const { roomState, wsStatus, myPlayerId, lastReaction, send } = useGameSocket();
+  const { roomState, myPlayerId, lastReaction, send } = useGameSocket();
   const [screen, setScreen] = useState<Screen>("home");
   const [version, setVersion] = useState<string>("loading...");
   const [pendingSolo, setPendingSolo] = useState(false);
@@ -166,13 +165,6 @@ function App() {
 
         {screen === "game" && (
           <div className={`game-screen ${isFirstTurnCountdown ? "first-turn-dimming" : ""}`}>
-            <TopBar
-              wsStatus={wsStatus}
-              phase={phase}
-              roomCode={roomState?.roomCode ?? "-"}
-            />
-
-
             <PlayerBar
               players={players}
               turn={roomState?.turn ?? null}

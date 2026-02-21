@@ -8,6 +8,13 @@ export interface TopicGenerateResponse {
     topicText?: string;
 }
 
+interface WorkerGenerateResponse {
+    topic: {
+        signedUrl: string;
+        prompt: string;
+    };
+}
+
 export interface ImageGenerateRequest {
     requestId: string;
     kind: "player" | "ai";
@@ -39,13 +46,17 @@ const WORKER_BASE = "http://127.0.0.1:8091";
 
 export class HttpWorkerClient implements WorkerClient {
     async generateTopic(req: TopicGenerateRequest): Promise<TopicGenerateResponse> {
-        const res = await fetch(`${WORKER_BASE}/v1/topic:generate`, {
+        const res = await fetch(`${WORKER_BASE}/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(req),
         });
-        if (!res.ok) throw new Error(`Worker topic:generate failed: ${res.status}`);
-        return (await res.json()) as TopicGenerateResponse;
+        if (!res.ok) throw new Error(`Worker generate failed: ${res.status}`);
+        const data = (await res.json()) as WorkerGenerateResponse;
+        return {
+            topicImageUrl: data.topic.signedUrl,
+            topicText: data.topic.prompt,
+        };
     }
 
     async generateImage(req: ImageGenerateRequest): Promise<ImageGenerateResponse> {

@@ -346,12 +346,14 @@ button:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr 0.8fr;
   gap: 14px;
-  margin-bottom: 16px;
+  max-width: 1400px;
+  margin: 0 auto 12px;
 }
 
 .panel {
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 /* ── Image frames ───────────────────────────────────── */
@@ -359,6 +361,7 @@ button:disabled {
   border: 1px solid var(--border-glow);
   border-radius: 14px;
   background: rgba(220, 240, 255, 0.45);
+  width: 100%;
   overflow: hidden;
   display: grid;
   place-items: center;
@@ -383,10 +386,12 @@ button:disabled {
 
 .image-frame.large {
   aspect-ratio: 1 / 1;
+  min-height: 320px;
 }
 
 .image-frame.small {
   aspect-ratio: 4 / 5;
+  min-height: 260px;
 }
 
 .image-frame img {
@@ -459,12 +464,13 @@ button:disabled {
 }
 
 .ai-panel {
-  max-width: 380px;
+  max-width: 320px;
   justify-self: end;
 }
 
 .ai-panel .image-frame.small {
   aspect-ratio: 1 / 1;
+  min-height: 300px;
 }
 
 /* ── Prompt section ─────────────────────────────────── */
@@ -543,9 +549,9 @@ button:disabled {
 
 #promptInput {
   width: 100%;
-  min-height: 110px;
+  min-height: 160px;
   resize: vertical;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 /* ── Timer bar ──────────────────────────────────────── */
@@ -673,7 +679,7 @@ button:disabled {
   }
 
   .ai-panel {
-    max-width: 340px;
+    max-width: 290px;
     justify-self: end;
     grid-column: span 2;
   }
@@ -685,13 +691,26 @@ button:disabled {
   }
 
   .ai-panel {
-    max-width: 300px;
+    max-width: 340px;
     justify-self: center;
     grid-column: span 1;
   }
 
   .image-frame.small {
     aspect-ratio: 1 / 1;
+    min-height: 240px;
+  }
+
+  .image-frame.large {
+    min-height: 280px;
+  }
+
+  .ai-panel .image-frame.small {
+    min-height: 260px;
+  }
+
+  #promptInput {
+    min-height: 150px;
   }
 
   h1 {
